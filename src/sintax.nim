@@ -1,6 +1,4 @@
 import argparse, readfx, strutils, os, times
-import std/cpuinfo
-import malebolgia
 import unoisenim/sintax_algo
 
 proc main() =
@@ -11,8 +9,6 @@ proc main() =
     option("-t", "--tabbedout", help = "Output tabbed file")
     option("-c", "--cutoff", default = some("0.8"),
         help = "Confidence cutoff (default 0.8)")
-    option("-w", "--workers", default = some("1"),
-        help = "Number of worker threads (default 1)")
 
   var opts: typeof(p.parse())
   try:
@@ -31,9 +27,6 @@ proc main() =
     quit(1)
 
   let cutoff = parseFloat(opts.cutoff)
-  var nThreads = parseInt(opts.workers)
-  if nThreads <= 0:
-    nThreads = countProcessors()
 
   # Load DB
   var dbSeqs = newSeq[string]()
@@ -62,16 +55,11 @@ proc main() =
     tabF = open(opts.tabbedout, fmWrite)
 
   var fQ = readfx.xopen[GzFile](opts.input, mode = fmRead)
-  echo "Classifying queries using ", nThreads, " threads..."
+  echo "Classifying queries..."
   let t2 = cpuTime()
 
-  type OutQuery = tuple[name, outTax, strand, passedTax: string]
-  var batch = newSeq[string]()
-  var names = newSeq[string]()
-  let batchSize = 1000 * nThreads
-
-  proc processSeq(q: string, qName: string, idxPtr: ptr SintaxIndex): OutQuery =
-    let hit = sintax(q, idxPtr[])
+  while readFastx(fQ, record):
+    let hit = sintax(record.sequence, idx)
     var outTax = ""
     var passedTax = ""
     if hit.rankNames.len > 0:
@@ -92,34 +80,8 @@ proc main() =
       outTax = "*"
       passedTax = "*"
 
-    return (qName, outTax, $hit.strand, passedTax)
-
-  var m = createMaster()
-
-  while true:
-    var record: FQRecord
-    let hasMore = readFastx(fQ, record)
-    if hasMore:
-      batch.add(record.sequence)
-      names.add(record.name)
-
-    if batch.len >= batchSize or (not hasMore and batch.len > 0):
-      # Process this batch concurrently
-      var results = newSeq[OutQuery](batch.len)
-      m.awaitAll:
-        for i in 0 ..< batch.len:
-          m.spawn processSeq(batch[i], names[i], addr idx) -> results[i]
-
-      if writeTab:
-        for res in results:
-          tabF.writeLine(res.name & "\t" & res.outTax & "\t" & res.strand &
-              "\t" & res.passedTax)
-
-      batch.setLen(0)
-      names.setLen(0)
-
-    if not hasMore:
-      break
+    if writeTab:
+      tabF.writeLine(record.name & "\t" & outTax & "\t" & hit.strand & "\t" & passedTax)
 
   let t3 = cpuTime()
   if writeTab:
