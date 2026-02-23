@@ -3,6 +3,7 @@ import unoisenim/utils
 import unoisenim/unoise_algo
 import unoisenim/uchime2_algo
 import unoisenim/sintax_algo
+import unoisenim/nbc_algo
 
 suite "utils":
   test "parseSize extracts abundance from FASTA label":
@@ -85,3 +86,38 @@ suite "sintax":
     let hit = sintax(rc(dbSeq), idx, bootSubset = 16, bootIters = 50)
     check hit.strand == '-'
     check hit.rankNames == @["d:Bacteria", "p:Firmicutes", "g:Testus"]
+
+suite "nbc":
+  test "parseTaxRanks splits comma-delimited taxonomy":
+    let ranks = parseTaxRanks("d:Bacteria,p:Firmicutes,g:Testus")
+    check ranks == @["d:Bacteria", "p:Firmicutes", "g:Testus"]
+
+  test "nbc classifies a known query with high confidence":
+    let seqA = "ACGTCAGTGCATGACCTGTAAG"
+    let seqB = "TTGGAACCGTTTCCGGAACTTG"
+    let idx = buildNbcIndex(
+      @[seqA, seqB],
+      @["d:Bacteria,p:Firmicutes,g:Alpha", "d:Bacteria,p:Actinobacteria,g:Beta"]
+    )
+
+    let hit = nbc(seqA, idx, bootIters = 80, minWords = 5)
+    check hit.strand == '+'
+    check hit.rankNames == @["d:Bacteria", "p:Firmicutes", "g:Alpha"]
+    check hit.rankProbs.len == 3
+    check hit.rankProbs[1] >= 0.9
+    check hit.rankProbs[2] >= 0.9
+
+  test "nbc handles short queries as unclassified":
+    let idx = buildNbcIndex(@["ACGTCAGTGCATGACCTGTAAG"],
+      @["d:Bacteria,p:Firmicutes,g:Alpha"])
+    let hit = nbc("ACGTACG", idx)
+    check hit.rankNames.len == 0
+    check hit.rankProbs.len == 0
+    check hit.strand == '+'
+
+  test "nbc uses reverse-complement strand when better":
+    let seqA = "ACGTCAGTGCATGACCTGTAAG"
+    let idx = buildNbcIndex(@[seqA], @["d:Bacteria,p:Firmicutes,g:Alpha"])
+    let hit = nbc(reverseComplement(seqA), idx, bootIters = 80, minWords = 5)
+    check hit.strand == '-'
+    check hit.rankNames == @["d:Bacteria", "p:Firmicutes", "g:Alpha"]
