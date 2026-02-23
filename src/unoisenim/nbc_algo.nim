@@ -122,8 +122,8 @@ proc buildNbcIndex*(seqs: seq[string], taxStrings: seq[string]): NbcIndex =
     for nodeId in path:
       inc idx.nodes[nodeId].seqCount
       for w in words:
-        var c = idx.nodes[nodeId].wordCounts.mgetOrPut(w, 0)
-        inc c
+        idx.nodes[nodeId].wordCounts[w] =
+          idx.nodes[nodeId].wordCounts.getOrDefault(w, 0) + 1
 
   return idx
 
@@ -166,7 +166,7 @@ proc choosePath(words: seq[uint16], idx: NbcIndex, randomTie: bool,
 
     let chosen =
       if randomTie and bestChildren.len > 1:
-        bestChildren[nextRand(seed) mod uint32(bestChildren.len)]
+        bestChildren[int(nextRand(seed) mod uint32(bestChildren.len))]
       else:
         bestChildren[0]
 
@@ -181,7 +181,7 @@ proc sampleWords(words: seq[uint16], sampleSize: int, seed: var uint32): seq[uin
     return
   result = newSeq[uint16](sampleSize)
   for i in 0 ..< sampleSize:
-    result[i] = words[nextRand(seed) mod uint32(words.len)]
+    result[i] = words[int(nextRand(seed) mod uint32(words.len))]
 
 proc classifyOneDir(query: string, idx: NbcIndex, bootIters: int,
     minWords: int): tuple[path: seq[int], probs: seq[float], score: float] =
