@@ -12,6 +12,8 @@ proc main() =
         help = "Alpha parameter for skew calculation (default 2.0)")
     option("-m", "--minsize", default = some("8"),
         help = "Minimum abundance for a sequence to be processed (default 8)")
+    option("--uchime-threads", default = some("0"),
+        help = "UCHIME threads: 0=auto threaded, 1=sequential, >1 fixed threadpool size")
 
   var opts: typeof(p.parse())
   try:
@@ -28,6 +30,7 @@ proc main() =
   let inputFile = opts.input
   let alpha = parseFloat(opts.alpha)
   let minsize = parseInt(opts.minsize)
+  let uchimeThreads = parseInt(opts.uchime_threads)
 
   var seqs = newSeq[UnoiseSeq]()
   var f = readfx.xopen[GzFile](inputFile, mode = fmRead)
@@ -47,7 +50,13 @@ proc main() =
   echo "UNOISE algorithm took ", (t1 - t0), " seconds."
 
   let t2 = cpuTime()
-  let chimeras = uchime(centroids, 16.0)
+  if uchimeThreads == 1:
+    echo "UCHIME mode: sequential"
+  elif uchimeThreads == 0:
+    echo "UCHIME mode: threaded (auto pool)"
+  else:
+    echo "UCHIME mode: threaded (pool=", uchimeThreads, ")"
+  let chimeras = uchime(centroids, 16.0, uchimeThreads)
   let t3 = cpuTime()
   echo "UCHIME chimera filtering took ", (t3 - t2), " seconds."
   var zotuCount = 0

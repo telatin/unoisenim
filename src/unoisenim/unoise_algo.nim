@@ -10,29 +10,61 @@ type
     seqObj*: UnoiseSeq
     totalSize*: int
 
-proc editDistanceLimit*(s1, s2: string, limit: int): int =
+proc editDistanceLimitImpl(s1, s2: string, limit: int, v0: var seq[int],
+    v1: var seq[int]): int =
   let len1 = s1.len
   let len2 = s2.len
-  if abs(len1 - len2) > limit: return limit + 1
-  if len1 == 0: return if len2 <= limit: len2 else: limit + 1
-  if len2 == 0: return if len1 <= limit: len1 else: limit + 1
+  let limitPlusOne = limit + 1
+  if abs(len1 - len2) > limit: return limitPlusOne
+  if len1 == 0: return if len2 <= limit: len2 else: limitPlusOne
+  if len2 == 0: return if len1 <= limit: len1 else: limitPlusOne
+  if limit == 0: return if s1 == s2: 0 else: 1
 
-  var v0 = newSeq[int](len2 + 1)
-  var v1 = newSeq[int](len2 + 1)
-  for i in 0..len2: v0[i] = i
-  for i in 0..<len1:
-    v1[0] = i + 1
-    var minVal = v1[0]
-    for j in 0..<len2:
-      let cost = if s1[i] == s2[j]: 0 else: 1
-      v1[j + 1] = min(v1[j] + 1, min(v0[j + 1] + 1, v0[j] + cost))
-      if v1[j + 1] < minVal: minVal = v1[j + 1]
+  if v0.len < len2 + 1:
+    v0.setLen(len2 + 1)
+    v1.setLen(len2 + 1)
+  for j in 0..len2:
+    if j <= limit:
+      v0[j] = j
+    else:
+      v0[j] = limitPlusOne
 
-    if minVal > limit: return limit + 1
+  for i in 1..len1:
+    let minJ = max(1, i - limit)
+    let maxJ = min(len2, i + limit)
+    if minJ > maxJ:
+      return limitPlusOne
+
+    v1[0] = if i <= limit: i else: limitPlusOne
+    if minJ > 1:
+      v1[minJ - 1] = limitPlusOne
+
+    var minVal = limitPlusOne
+    for j in minJ..maxJ:
+      let cost = if s1[i - 1] == s2[j - 1]: 0 else: 1
+      let ins = v1[j - 1] + 1
+      let del = v0[j] + 1
+      let sub = v0[j - 1] + cost
+      var best = if ins < del: ins else: del
+      if sub < best:
+        best = sub
+      v1[j] = best
+      if best < minVal:
+        minVal = best
+
+    if maxJ < len2:
+      v1[maxJ + 1] = limitPlusOne
+
+    if minVal > limit: return limitPlusOne
     swap(v0, v1)
 
   if v0[len2] <= limit: return v0[len2]
-  return limit + 1
+  return limitPlusOne
+
+proc editDistanceLimit*(s1, s2: string, limit: int): int =
+  var v0 = newSeq[int](s2.len + 1)
+  var v1 = newSeq[int](s2.len + 1)
+  return editDistanceLimitImpl(s1, s2, limit, v0, v1)
 
 proc extractKmers*(s: string, kmers: var seq[uint16]) =
   kmers.setLen(0)
@@ -61,6 +93,8 @@ proc unoise*(sequences: seq[UnoiseSeq], alpha: float = 2.0,
   sortedSeqs.sort(proc(a, b: UnoiseSeq): int = cmp(b.size, a.size))
 
   var centroids = newSeqOfCap[Centroid](1024)
+  var row0 = newSeq[int](0)
+  var row1 = newSeq[int](0)
 
   for query in sortedSeqs:
     if query.size < minsize:
@@ -69,21 +103,29 @@ proc unoise*(sequences: seq[UnoiseSeq], alpha: float = 2.0,
 
     var bestTargetIdx = -1
     var bestDiffs = int.high
+    let querySizeTimes2 = query.size * 2
+    let querySeq = query.seq
 
     for i in 0..<centroids.len:
       let targetSize = centroids[i].seqObj.size
+      if targetSize < querySizeTimes2:
+        # Centroids are added in descending size order, so remaining
+        # targets will not satisfy the UNOISE skew threshold either.
+        break
+
       let skew = float(targetSize) / float(query.size)
 
       let maxDiffFloat = (log2(skew) - 1.0) / alpha
       if maxDiffFloat < 0.0:
-        continue
+        break
 
       let maxDiff = int(maxDiffFloat)
 
-      if abs(query.seq.len - centroids[i].seqObj.seq.len) > maxDiff:
+      let targetSeq = centroids[i].seqObj.seq
+      if abs(querySeq.len - targetSeq.len) > maxDiff:
         continue
 
-      let diff = editDistanceLimit(query.seq, centroids[i].seqObj.seq, maxDiff)
+      let diff = editDistanceLimitImpl(querySeq, targetSeq, maxDiff, row0, row1)
       if diff <= maxDiff:
         if diff < bestDiffs:
           bestDiffs = diff
