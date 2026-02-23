@@ -6,7 +6,7 @@ description   = "Nim library for USEARCH algorithms unoise and sintax."
 license       = "MIT"
 srcDir        = "src"
 binDir        = "bin"
-bin           = @["unoise", "sintax"]
+bin           = @["unoise", "sintax", "nbc"]
 
 
 # Dependencies
