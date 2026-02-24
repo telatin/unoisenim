@@ -16,10 +16,13 @@
 ##
 ## **References**
 ##
-## * Edgar RC (2016). UNOISE2: improved error-correction for Illumina 16S
-##   and ITS amplicon sequencing. *bioRxiv* doi:10.1101/081257
-## * Edgar RC (2016). SINTAX: a simple non-Bayesian taxonomy classifier
-##   for 16S and ITS sequences. *bioRxiv* doi:10.1101/074161
+## * Edgar RC. UNOISE2: improved error-correction for Illumina 16S and ITS amplicon
+##   sequencing. *bioRxiv* 081257; doi: `10.1101/081257 <https://doi.org/10.1101/081257>`_
+## * Edgar RC. SINTAX: a simple non-Bayesian taxonomy classifier for 16S and ITS
+##   sequences. *bioRxiv* 074161; doi: `10.1101/074161 <https://www.biorxiv.org/content/10.1101/074161v1.abstract>`_
+## * Wang Q, Garrity GM, Tiedje JM, Cole JR. Naive Bayesian Classifier for Rapid Assignment
+##   of rRNA Sequences into the New Bacterial Taxonomy. *Appl Environ Microbiol.* 2007;
+##   doi: `10.1128/AEM.00062-07 <https://doi.org/10.1128/AEM.00062-07>`_
 
 import unoisenim/utils
 import unoisenim/unoise_algo

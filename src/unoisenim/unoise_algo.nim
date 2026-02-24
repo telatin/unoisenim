@@ -4,8 +4,8 @@
 ## Zero-radius OTUs (ZOTUs).  Sequences are sorted by abundance and clustered
 ## using the UNOISE skew formula and banded Levenshtein distance.
 ##
-## **Reference:** Edgar RC (2016). UNOISE2: improved error-correction for
-## Illumina 16S and ITS amplicon sequencing. *bioRxiv* doi:10.1101/081257
+## **Reference:** Edgar RC. UNOISE2: improved error-correction for Illumina 16S and ITS
+## amplicon sequencing. *bioRxiv* 081257; doi: `10.1101/081257 <https://doi.org/10.1101/081257>`_
 
 import math, algorithm
 

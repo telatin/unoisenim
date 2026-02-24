@@ -3,6 +3,10 @@
 ## Implements the RDP-style NBC algorithm using 8-mer word frequencies
 ## and bootstrap resampling to assign taxonomic ranks with confidence
 ## estimates.  Both forward and reverse-complement strands are evaluated.
+##
+## **Reference:** Wang Q, Garrity GM, Tiedje JM, Cole JR. Naive Bayesian Classifier for
+## Rapid Assignment of rRNA Sequences into the New Bacterial Taxonomy. *Appl Environ Microbiol.*
+## 2007; doi: `10.1128/AEM.00062-07 <https://doi.org/10.1128/AEM.00062-07>`_
 
 import math, strutils, tables
 

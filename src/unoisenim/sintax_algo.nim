@@ -4,8 +4,8 @@
 ## bootstrap resampling to classify sequences against a reference database
 ## without requiring a training step.
 ##
-## **Reference:** Edgar RC (2016). SINTAX: a simple non-Bayesian taxonomy
-## classifier for 16S and ITS sequences. *bioRxiv* doi:10.1101/074161
+## **Reference:** Edgar RC. SINTAX: a simple non-Bayesian taxonomy classifier for 16S and ITS
+## sequences. *bioRxiv* 074161; doi: `10.1101/074161 <https://www.biorxiv.org/content/10.1101/074161v1.abstract>`_
 
 import strutils, tables, algorithm
 
