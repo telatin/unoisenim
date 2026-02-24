@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SINTAX Algorithm</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --accent1: #f7a73e;   /* warm orange — taxonomy */
+    --accent2: #e05aff;   /* purple — bootstrap */
+    --accent3: #ff6b6b;
+    --accent4: #00d4aa;
+    --text: #e8eaf0;
+    --muted: #8b92b8;
+    --border: #2e3250;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.6; }
+
+  nav { position: sticky; top: 0; z-index: 100; background: rgba(15,17,23,0.92);
+    backdrop-filter: blur(12px); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 2rem; padding: 0.8rem 2rem; }
+  nav .logo { font-weight: 700; font-size: 1rem; color: var(--accent1); letter-spacing: 1px; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 0.875rem; transition: color 0.2s; }
+  nav a:hover { color: var(--text); }
+
+  .hero { text-align: center; padding: 5rem 2rem 3rem;
+    background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(247,167,62,0.15) 0%, transparent 70%); }
+  .hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800;
+    background: linear-gradient(135deg, #fff 30%, var(--accent1)); -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; background-clip: text; }
+  .hero p { color: var(--muted); font-size: 1.1rem; max-width: 600px; margin: 1rem auto 0; }
+  .pill-row { display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem; }
+  .pill { background: var(--surface2); border: 1px solid var(--border); border-radius: 100px;
+    padding: 0.3rem 1rem; font-size: 0.8rem; color: var(--muted); }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+  section { margin-bottom: 4rem; }
+  h2 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; }
+  h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--accent1); }
+  p { color: var(--muted); margin-bottom: 0.9rem; }
+
+  .badge { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 4px; font-size: 0.75rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge-orange { background: rgba(247,167,62,0.2); color: var(--accent1); }
+  .badge-purple { background: rgba(224,90,255,0.15); color: var(--accent2); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.2rem; margin-top: 1.5rem; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  .steps { display: flex; flex-direction: column; gap: 0; margin-top: 1.5rem; }
+  .step { display: flex; gap: 1rem; align-items: flex-start; position: relative; padding-bottom: 1.5rem; }
+  .step:last-child { padding-bottom: 0; }
+  .step::before { content: ''; position: absolute; left: 20px; top: 42px; bottom: 0; width: 2px; background: var(--border); }
+  .step:last-child::before { display: none; }
+  .step-icon { min-width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; }
+  .step-body { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; }
+  .step-body strong { display: block; margin-bottom: 0.2rem; color: var(--text); }
+  .step-body p { margin: 0; font-size: 0.9rem; }
+
+  .formula { background: var(--surface2); border-left: 3px solid var(--accent1); border-radius: 6px;
+    padding: 0.8rem 1.2rem; font-family: 'Courier New', monospace; font-size: 0.9rem; color: var(--accent2); margin: 0.8rem 0; }
+
+  .canvas-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  canvas { display: block; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th { background: var(--surface2); padding: 0.7rem 1rem; text-align: left; color: var(--text); font-weight: 600; }
+  td { padding: 0.7rem 1rem; border-top: 1px solid var(--border); color: var(--muted); }
+  tr:hover td { background: var(--surface2); }
+
+  [data-tip] { position: relative; cursor: help; border-bottom: 1px dashed var(--muted); }
+  [data-tip]::after { content: attr(data-tip); position: absolute; bottom: 125%; left: 50%;
+    transform: translateX(-50%); background: #111; color: #eee; font-size: 0.78rem;
+    padding: 0.4rem 0.7rem; border-radius: 6px; white-space: nowrap; pointer-events: none;
+    opacity: 0; transition: opacity 0.2s; z-index: 10; border: 1px solid var(--border); }
+  [data-tip]:hover::after { opacity: 1; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 3rem 0; }
+  code { background: var(--surface2); padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.85em; color: var(--accent1); }
+
+  footer { text-align: center; padding: 2rem; color: var(--border); font-size: 0.82rem; border-top: 1px solid var(--border); }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">🔬 SINTAX</span>
+  <a href="#overview">Overview</a>
+  <a href="#algorithm">Algorithm</a>
+  <a href="#bootstrap">Bootstrap</a>
+  <a href="#vs-rdp">vs RDP</a>
+  <a href="#usage">Usage</a>
+</nav>
+
+<div class="hero">
+  <h1>SINTAX Algorithm</h1>
+  <p>A simple, fast, non-Bayesian taxonomy classifier for 16S rRNA and ITS marker gene sequences</p>
+  <div class="pill-row">
+    <span class="pill">16S rRNA</span>
+    <span class="pill">ITS</span>
+    <span class="pill">18S</span>
+    <span class="pill">k-mer similarity</span>
+    <span class="pill">Bootstrap confidence</span>
+    <span class="pill">No training required</span>
+  </div>
+</div>
+
+<main>
+
+<!-- ======================== OVERVIEW ======================== -->
+<section id="overview">
+  <span class="badge badge-orange">Taxonomy Classification</span>
+  <h2 style="color: var(--accent1); margin-top:0.4rem;">What is SINTAX?</h2>
+  <p>SINTAX (<strong style="color:var(--text)">SI</strong>mple <strong style="color:var(--text)">N</strong>on-bayesian <strong style="color:var(--text)">TAX</strong>onomy classifier) predicts the taxonomy of amplicon reads at all ranks — domain through genus — and attaches a <span data-tip="Fraction of bootstrap replicates agreeing on this prediction. Range 0–1.">bootstrap confidence value</span> to each rank. It is implemented in the USEARCH <code>sintax</code> command and also in VSEARCH.</p>
+
+  <div class="two-col" style="margin-top:1.5rem;">
+    <div>
+      <h3>Key Design Choices</h3>
+      <p>Unlike the RDP Naive Bayesian Classifier, SINTAX uses <strong style="color:var(--text)">k-mer similarity</strong> (not Bayesian posteriors) to find the best-matching reference sequences. This means:</p>
+      <ul style="color:var(--muted); font-size:0.9rem; padding-left:1.2rem; line-height:1.9;">
+        <li>No training step required</li>
+        <li>Works with large, partially annotated databases (SILVA, Greengenes)</li>
+        <li>Reference sequences don't need a lowest-rank label</li>
+        <li>Comparable accuracy to RDP on V4 16S</li>
+        <li>Lower over-classification on full-length sequences</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Supported Markers</h3>
+      <div class="card-grid" style="margin-top:0;">
+        <div class="card" style="padding:1rem;">
+          <div style="font-size:1.4rem; margin-bottom:0.3rem;">🦠</div>
+          <strong style="color:var(--text); font-size:0.9rem;">16S rRNA</strong>
+          <p style="font-size:0.82rem; margin:0.3rem 0 0;">Bacteria & Archaea. All variable regions (V1–V9). Best results with full-length or V4.</p>
+        </div>
+        <div class="card" style="padding:1rem;">
+          <div style="font-size:1.4rem; margin-bottom:0.3rem;">🍄</div>
+          <strong style="color:var(--text); font-size:0.9rem;">ITS1 / ITS2</strong>
+          <p style="font-size:0.82rem; margin:0.3rem 0 0;">Fungi. Use UNITE database. Species-level prediction sometimes possible.</p>
+        </div>
+        <div class="card" style="padding:1rem;">
+          <div style="font-size:1.4rem; margin-bottom:0.3rem;">🌿</div>
+          <strong style="color:var(--text); font-size:0.9rem;">18S rRNA</strong>
+          <p style="font-size:0.82rem; margin:0.3rem 0 0;">Eukaryotes. Use SILVA eukaryotic subset.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== ANIMATED OVERVIEW CANVAS ======================== -->
+<div class="canvas-wrap">
+  <canvas id="overviewCanvas" width="1060" height="200"></canvas>
+</div>
+<p style="font-size:0.8rem; color:var(--border); margin-top:0.5rem; text-align:center;">Animated: query sequence broken into 8-mers → searched against reference database → top hits vote on taxonomy at each rank.</p>
+
+<hr class="divider">
+
+<!-- ======================== ALGORITHM ======================== -->
+<section id="algorithm">
+  <span class="badge badge-orange">Core Algorithm</span>
+  <h2 style="color: var(--accent1); margin-top:0.4rem;">How SINTAX Works</h2>
+
+  <div class="two-col" style="margin-top:1rem;">
+    <div>
+      <h3>Step 1 — k-mer word extraction</h3>
+      <p>The query sequence is decomposed into all overlapping <span data-tip="Short subsequences of length k, typically 8 bp">8-mers</span>. The same is done for all reference sequences in the database at index-build time.</p>
+      <div class="formula">query = ACGTACGT...<br>8-mers: ACGTACGT, CGTACGTA, ...</div>
+
+      <h3 style="margin-top:1.2rem;">Step 2 — Top-hit search</h3>
+      <p>The fraction of shared 8-mers is used as a fast similarity metric to identify a shortlist of top-matching reference sequences from the database. This is the same k-mer word-counting approach used in USEARCH's global search.</p>
+      <div class="formula">sim(Q, R) = |kmers(Q) ∩ kmers(R)|<br>           ────────────────────────<br>           |kmers(Q) ∪ kmers(R)|</div>
+    </div>
+    <div>
+      <h3>Step 3 — Taxonomy voting</h3>
+      <p>The top-hitting reference sequences carry taxonomy annotations. SINTAX reads off the taxonomy of the single best-matching reference at each rank (domain → phylum → class → order → family → genus).</p>
+      <div class="canvas-wrap" style="margin-top:0.5rem;">
+        <canvas id="rankCanvas" width="480" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:2rem; color:var(--accent2);">Step 4 — Bootstrap confidence</h3>
+  <p>This is the key innovation of SINTAX. To assign a <strong style="color:var(--text)">confidence value</strong> to each taxonomic rank, SINTAX repeats the k-mer search multiple times, each time using a random subset of the query's 8-mers:</p>
+
+  <div class="canvas-wrap" style="margin-top:1rem;">
+    <canvas id="bootstrapCanvas" width="1060" height="220"></canvas>
+  </div>
+  <p style="font-size:0.8rem; color:var(--border); margin-top:0.5rem; text-align:center;">Animated: 100 bootstrap replicates. Each replicate samples a subset of k-mers. The bootstrap confidence = fraction of replicates that agree on a given rank's prediction.</p>
+
+  <div class="steps" style="margin-top:2rem;">
+    <div class="step">
+      <div class="step-icon" style="background:rgba(247,167,62,0.15); color:var(--accent1);">1</div>
+      <div class="step-body"><strong>Sort & index k-mers</strong><p>Build a k-mer index over all reference sequences at database creation time (<code>makeudb_sintax</code>). No training needed.</p></div>
+    </div>
+    <div class="step">
+      <div class="step-icon" style="background:rgba(247,167,62,0.15); color:var(--accent1);">2</div>
+      <div class="step-body"><strong>Full k-mer search → top hit</strong><p>Find the best-matching reference using all query 8-mers. Extract its taxonomy string as the initial prediction.</p></div>
+    </div>
+    <div class="step">
+      <div class="step-icon" style="background:rgba(247,167,62,0.15); color:var(--accent1);">3</div>
+      <div class="step-body"><strong>Bootstrap resampling (×100)</strong><p>Repeat the search 100 times, each time drawing a random subset (~¼) of the query's 8-mers. Record the top hit's taxonomy at each rank for every replicate.</p></div>
+    </div>
+    <div class="step">
+      <div class="step-icon" style="background:rgba(247,167,62,0.15); color:var(--accent1);">4</div>
+      <div class="step-body"><strong>Compute confidence per rank</strong><p>confidence(rank) = fraction of bootstrap replicates that agree with the majority prediction at that rank. High-confidence predictions have values near 1.0.</p></div>
+    </div>
+    <div class="step">
+      <div class="step-icon" style="background:rgba(247,167,62,0.15); color:var(--accent1);">5</div>
+      <div class="step-body"><strong>Apply cutoff & output</strong><p>Ranks below <code>-sintax_cutoff</code> (typically 0.8) are dropped from the final prediction. Output written to <code>-tabbedout</code> file.</p></div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ======================== CONFIDENCE ======================== -->
+<section id="bootstrap">
+  <span class="badge badge-purple">Bootstrap Confidence</span>
+  <h2 style="color: var(--accent2); margin-top:0.4rem;">Understanding Confidence Values</h2>
+
+  <div class="two-col">
+    <div>
+      <p>The bootstrap confidence is a <strong style="color:var(--text)">reproducibility score</strong>, not a Bayesian posterior. It answers: "If I only used a subset of my sequence's k-mers, would I still get the same answer?"</p>
+      <div class="formula">confidence(rank r) =<br>  # replicates predicting T_r<br>  ─────────────────────────<br>  total replicates (100)</div>
+      <p>Confidence values are <strong style="color:var(--text)">hierarchical</strong>: confidence decreases (or stays equal) as you go deeper in the tree. A genus prediction is always ≤ family confidence.</p>
+    </div>
+    <div>
+      <h3>Interpreting the output</h3>
+      <div class="card" style="font-family: monospace; font-size:0.82rem; line-height:2;">
+        <span style="color:var(--accent4)">d:Bacteria(1.00)</span>,<br>
+        <span style="color:var(--accent4)">p:Firmicutes(0.99)</span>,<br>
+        <span style="color:var(--accent4)">c:Bacilli(0.97)</span>,<br>
+        <span style="color:var(--accent4)">o:Lactobacillales(0.93)</span>,<br>
+        <span style="color:var(--accent4)">f:Lactobacillaceae(0.88)</span>,<br>
+        <span style="color:var(--accent1)">g:Lactobacillus(0.76)</span><span style="color:var(--muted)"> ← below 0.8 cutoff → dropped</span>
+      </div>
+      <p style="font-size:0.85rem; margin-top:0.8rem;">With <code>-sintax_cutoff 0.8</code>, genus is dropped from the final prediction since 0.76 &lt; 0.8.</p>
+    </div>
+  </div>
+
+  <!-- Confidence bar chart canvas -->
+  <div class="canvas-wrap" style="margin-top:1.5rem;">
+    <canvas id="confCanvas" width="1060" height="180"></canvas>
+  </div>
+  <p style="font-size:0.8rem; color:var(--border); margin-top:0.5rem; text-align:center;">Animated bar chart: typical confidence decay through taxonomic ranks. The 0.8 threshold line is shown in orange.</p>
+</section>
+
+<hr class="divider">
+
+<!-- ======================== VS RDP ======================== -->
+<section id="vs-rdp">
+  <h2>SINTAX vs RDP Classifier</h2>
+  <p>SINTAX was explicitly designed as a simpler alternative to the RDP Naive Bayesian Classifier (Wang et al. 2007). Both use bootstrapping for confidence, but differ fundamentally in the underlying method.</p>
+  <div class="card" style="padding:0; overflow:hidden; margin-top:1.5rem;">
+    <table>
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th style="color:var(--accent1)">SINTAX</th>
+          <th style="color:var(--accent4)">RDP Classifier</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Core method</td><td>k-mer similarity (top hit)</td><td>Naive Bayesian posterior probabilities</td></tr>
+        <tr><td>Training required?</td><td>❌ No</td><td>✅ Yes (must retrain per database)</td></tr>
+        <tr><td>Lowest-rank required in DB?</td><td>❌ No — partial annotation OK</td><td>✅ Yes — all sequences need genus labels</td></tr>
+        <tr><td>Large databases (SILVA)?</td><td>✅ Works directly</td><td>⚠️ Requires reformatting & retraining</td></tr>
+        <tr><td>V4 accuracy (genus)</td><td>~50%</td><td>~50%</td></tr>
+        <tr><td>Full-length over-classification</td><td>✅ Lower</td><td>⚠️ Higher</td></tr>
+        <tr><td>Speed</td><td>Fast (k-mer index)</td><td>Fast (word counts)</td></tr>
+        <tr><td>Species prediction</td><td>⚠️ Rarely reliable</td><td>⚠️ Rarely reliable</td></tr>
+        <tr><td>Implementation</td><td>USEARCH, VSEARCH</td><td>RDP web tool, QIIME2 plugin</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card" style="margin-top:1rem; border-color: rgba(247,167,62,0.3);">
+    <h3>⚠️ Species prediction caveat</h3>
+    <p style="margin:0; font-size:0.9rem;">On short tags like V4, multiple species often share identical sequences. Bootstrapping cannot distinguish them — if the top hit is 95% identical, it likely belongs to a different species. Reference databases are also sparse (most microbial species are unnamed), leading to over-confident wrong species calls. Species-level predictions should be treated with extreme caution.</p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ======================== USAGE ======================== -->
+<section id="usage">
+  <h2>Usage & Parameters</h2>
+  <div class="two-col">
+    <div>
+      <h3>Basic command</h3>
+      <div class="formula" style="font-size:0.82rem; line-height:1.8;">
+        usearch -sintax reads.fastq \<br>
+        &nbsp;&nbsp;-db 16s.udb \<br>
+        &nbsp;&nbsp;-tabbedout reads.sintax \<br>
+        &nbsp;&nbsp;-strand both \<br>
+        &nbsp;&nbsp;-sintax_cutoff 0.8
+      </div>
+      <h3 style="margin-top:1.2rem;">Build the database</h3>
+      <div class="formula" style="font-size:0.82rem; line-height:1.8;">
+        usearch -makeudb_sintax silva.fa \<br>
+        &nbsp;&nbsp;-output silva.udb
+      </div>
+    </div>
+    <div>
+      <h3>Key parameters</h3>
+      <div class="card" style="padding:1rem;">
+        <table style="font-size:0.84rem;">
+          <thead><tr><th>Parameter</th><th>Default</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>-sintax_cutoff</code></td><td>none</td><td>Recommended: 0.8</td></tr>
+            <tr><td><code>-strand</code></td><td>—</td><td>Required: <code>both</code> or <code>plus</code></td></tr>
+            <tr><td><code>-db</code></td><td>—</td><td>FASTA or UDB with taxonomy</td></tr>
+            <tr><td><code>-threads</code></td><td>1</td><td>Multithreading supported</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:2rem;">Recommended databases</h3>
+  <div class="card-grid">
+    <div class="card">
+      <h3>🦠 16S (bacteria)</h3>
+      <p style="font-size:0.88rem;">RDP training set v18 (21k seqs) — small, high quality, fast. SILVA v138 — larger, broader coverage but ~17% annotation errors.</p>
+    </div>
+    <div class="card">
+      <h3>🍄 ITS (fungi)</h3>
+      <p style="font-size:0.88rem;">UNITE — current recommended database. Available from unite.ut.ee in SINTAX-compatible format.</p>
+    </div>
+    <div class="card">
+      <h3>🌿 18S (eukaryotes)</h3>
+      <p style="font-size:0.88rem;">SILVA eukaryotic 18S subset (140k seqs). Broad coverage across protists, plants, fungi, animals.</p>
+    </div>
+    <div class="card">
+      <h3>⚠️ Database quality</h3>
+      <p style="font-size:0.88rem;">~1 in 5 SILVA/Greengenes annotations are wrong (Edgar 2018). Small, authoritative databases (RDP, LTP) often give better genus accuracy despite lower coverage.</p>
+    </div>
+  </div>
+
+  <!-- Pipeline canvas -->
+  <h3 style="margin-top:2rem;">Typical analysis pipeline</h3>
+  <div class="canvas-wrap" style="margin-top:0.8rem;">
+    <canvas id="pipelineCanvas" width="1060" height="160"></canvas>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Based on <a href="https://drive5.com/usearch/manual10/sintax_algo.html" target="_blank">drive5.com SINTAX documentation</a> by Robert C. Edgar.
+  SINTAX paper: <a href="https://doi.org/10.1101/074161" target="_blank">Edgar 2016, bioRxiv</a>.
+  Accuracy study: <a href="https://doi.org/10.7717/peerj.4652" target="_blank">Edgar 2018, PeerJ</a>.
+</footer>
+
+<script>
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function lerp(a,b,t){ return a+(b-a)*t; }
+function easeInOut(t){ return t<0.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+// ─── Overview canvas: query → k-mers → DB → taxonomy ─────────────────────────
+(function(){
+  const c = document.getElementById('overviewCanvas');
+  const W = c.offsetWidth||1060, H=200; c.width=W; c.height=H;
+  const ctx = c.getContext('2d');
+  const BG='#1a1d27';
+  
+  const SEQ = 'ACGTACGTTGCAACGTACGTTGCAACGT';
+  const kmers = [];
+  for(let i=0;i<SEQ.length-8+1;i++) kmers.push(SEQ.slice(i,i+8));
+  
+  const refTaxa = ['d:Bacteria','p:Firmicutes','c:Bacilli','o:Lactobacillales','f:Lactobacillaceae','g:Lactobacillus'];
+  const refColors = ['#f7a73e','#e05aff','#00d4aa','#6c63ff','#ff6b6b','#48bb78'];
+  
+  let t=0;
+  function draw(){
+    t+=0.012;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
+    
+    const phase = (t % (Math.PI*2)) / (Math.PI*2); // 0-1 cycle
+    
+    // ── Section 1: Query sequence ──
+    const qx=30, qy=H/2-8, qw=200, qh=24;
+    ctx.fillStyle='rgba(247,167,62,0.15)';
+    ctx.strokeStyle='rgba(247,167,62,0.6)';
+    ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(qx,qy,qw,qh,4); ctx.fill(); ctx.stroke();
+    // draw bases
+    const baseW = qw/SEQ.length;
+    const baseColors={'A':'#6c63ff','C':'#00d4aa','G':'#f7a73e','T':'#ff6b6b'};
+    SEQ.split('').forEach((b,i)=>{
+      ctx.fillStyle=baseColors[b]||'#888';
+      ctx.fillRect(qx+i*baseW+1, qy+2, baseW-1, qh-4);
+    });
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.font='bold 11px system-ui'; ctx.textAlign='center';
+    ctx.fillText('Query sequence', qx+qw/2, qy-12);
+    
+    // ── Animated sliding k-mer window ──
+    const windowI = Math.floor(phase*(SEQ.length-8)) % (SEQ.length-8+1);
+    const wx = qx + windowI*baseW, ww = 8*baseW;
+    ctx.strokeStyle='#fff';
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.roundRect(wx, qy, ww, qh, 3); ctx.stroke();
+    
+    // ── Arrow ──
+    const ax1=qx+qw+10, ax2=ax1+40;
+    ctx.strokeStyle='rgba(247,167,62,0.7)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(ax1,H/2); ctx.lineTo(ax2,H/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ax2,H/2); ctx.lineTo(ax2-8,H/2-5); ctx.lineTo(ax2-8,H/2+5); ctx.closePath();
+    ctx.fillStyle='rgba(247,167,62,0.7)'; ctx.fill();
+    
+    // ── DB block ──
+    const dbx=ax2+10, dby=H/2-40, dbw=140, dbh=80;
+    ctx.fillStyle='rgba(34,38,58,0.9)';
+    ctx.strokeStyle='rgba(224,90,255,0.5)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.roundRect(dbx,dby,dbw,dbh,8); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='rgba(224,90,255,0.8)';
+    ctx.font='bold 11px system-ui'; ctx.textAlign='center';
+    ctx.fillText('Reference DB', dbx+dbw/2, dby+16);
+    ctx.fillStyle='rgba(139,146,184,0.7)';
+    ctx.font='10px system-ui';
+    ctx.fillText('SILVA / UNITE', dbx+dbw/2, dby+34);
+    ctx.fillText('k-mer index', dbx+dbw/2, dby+50);
+    ctx.fillText('taxonomy labels', dbx+dbw/2, dby+66);
+    
+    // ── Arrow 2 ──
+    const ax3=dbx+dbw+10, ax4=ax3+40;
+    ctx.strokeStyle='rgba(247,167,62,0.7)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(ax3,H/2); ctx.lineTo(ax4,H/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ax4,H/2); ctx.lineTo(ax4-8,H/2-5); ctx.lineTo(ax4-8,H/2+5); ctx.closePath();
+    ctx.fillStyle='rgba(247,167,62,0.7)'; ctx.fill();
+    
+    // ── Taxonomy ranks output ──
+    const tx=ax4+10;
+    refTaxa.forEach((rank,i)=>{
+      const ry = H/2 - (refTaxa.length/2-0.5)*18 + i*18;
+      const rankAlpha = Math.min(1, (phase*5 - i*0.1)*2);
+      ctx.globalAlpha=Math.max(0, rankAlpha);
+      ctx.fillStyle=refColors[i];
+      ctx.font='11px monospace'; ctx.textAlign='left';
+      ctx.fillText(rank+'('+[1.0,0.99,0.97,0.93,0.88,0.76][i].toFixed(2)+')', tx, ry+4);
+      ctx.globalAlpha=1;
+    });
+    
+    ctx.fillStyle='rgba(247,167,62,0.7)';
+    ctx.font='bold 11px system-ui'; ctx.textAlign='center';
+    ctx.fillText('Taxonomy + confidence', tx+130, H/2-62);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─── Rank canvas: taxonomy tree ───────────────────────────────────────────────
+(function(){
+  const c=document.getElementById('rankCanvas');
+  const W=480,H=200; c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+  const BG='#1a1d27';
+  const ranks=['Domain','Phylum','Class','Order','Family','Genus'];
+  const colors=['#f7a73e','#e05aff','#00d4aa','#6c63ff','#ff6b6b','#48bb78'];
+  const confs=[1.0,0.99,0.97,0.93,0.88,0.76];
+  const names=['Bacteria','Firmicutes','Bacilli','Lactobacillales','Lactobacillaceae','Lactobacillus'];
+  let t=0;
+  function draw(){
+    t+=0.02;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
+    const barH=22, gap=4, startY=12;
+    ranks.forEach((r,i)=>{
+      const y=startY+i*(barH+gap);
+      const pulse = i===5 ? Math.sin(t)*0.08 : 0;
+      const alpha = i===5 ? 0.6+pulse : 1;
+      ctx.globalAlpha=alpha;
+      // bar bg
+      ctx.fillStyle='rgba(34,38,58,0.8)';
+      ctx.beginPath(); ctx.roundRect(80,y,W-90,barH,4); ctx.fill();
+      // fill bar
+      const fillW=(W-90)*confs[i];
+      ctx.fillStyle=colors[i];
+      ctx.globalAlpha=(i===5?0.4:0.25)*alpha;
+      ctx.beginPath(); ctx.roundRect(80,y,fillW,barH,4); ctx.fill();
+      ctx.globalAlpha=alpha;
+      // rank label
+      ctx.fillStyle=colors[i]; ctx.font='bold 10px system-ui';
+      ctx.textAlign='right'; ctx.fillText(r, 76, y+barH/2+4);
+      // name
+      ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.font='10px system-ui';
+      ctx.textAlign='left'; ctx.fillText(names[i], 86, y+barH/2+4);
+      // conf
+      ctx.fillStyle=colors[i]; ctx.font='bold 10px system-ui';
+      ctx.textAlign='right'; ctx.fillText(confs[i].toFixed(2), W-4, y+barH/2+4);
+      ctx.globalAlpha=1;
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─── Bootstrap canvas: replicates animation ───────────────────────────────────
+(function(){
+  const c=document.getElementById('bootstrapCanvas');
+  const W=c.offsetWidth||1060, H=220; c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+  const BG='#1a1d27';
+  const N=40; // visible replicate slots
+  const slots=[];
+  const RANKS=['d','p','c','o','f','g'];
+  const CORRECT=['Bacteria','Firmicutes','Bacilli','Lactobacillales','Lactobacillaceae','Lactobacillus'];
+  // probability of correct at each rank
+  const prob=[1.0,0.99,0.97,0.93,0.88,0.76];
+  const rColors=['#f7a73e','#e05aff','#00d4aa','#6c63ff','#ff6b6b','#48bb78'];
+  for(let i=0;i<N;i++) slots.push({age:Math.random()*100, active:false, results:[]});
+  
+  let t=0;
+  function generateResult(){
+    return RANKS.map((_,ri)=> Math.random()<prob[ri]);
+  }
+  
+  function draw(){
+    t+=0.025;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
+    
+    const slotW=Math.floor((W-80)/N);
+    const slotH=6*10+10;
+    const startX=40;
+    const startY=(H-slotH)/2+10;
+    
+    // labels
+    RANKS.forEach((r,ri)=>{
+      ctx.fillStyle=rColors[ri]; ctx.font='bold 11px system-ui';
+      ctx.textAlign='right'; ctx.fillText(r+':', 36, startY+ri*10+6+4);
+    });
+    
+    // update and draw slots
+    for(let i=0;i<N;i++){
+      const s=slots[i];
+      s.age+=0.6;
+      if(s.age>80){
+        s.age=0;
+        s.results=generateResult();
+      }
+      const x=startX+i*slotW;
+      const alpha=Math.min(1, Math.min(s.age/8, (80-s.age)/8));
+      
+      s.results.forEach((ok,ri)=>{
+        const y=startY+ri*10;
+        ctx.globalAlpha=alpha*0.85;
+        ctx.fillStyle=ok?rColors[ri]:'rgba(139,146,184,0.3)';
+        ctx.fillRect(x, y, slotW-2, 8);
+      });
+      ctx.globalAlpha=1;
+    }
+    
+    // confidence bars on right
+    const bx=startX+N*slotW+20, bw=W-bx-10;
+    ctx.fillStyle='rgba(139,146,184,0.5)'; ctx.font='bold 11px system-ui';
+    ctx.textAlign='left'; ctx.fillText('Bootstrap confidence', bx, startY-8);
+    
+    RANKS.forEach((r,ri)=>{
+      const y=startY+ri*10;
+      ctx.fillStyle='rgba(34,38,58,0.8)';
+      ctx.fillRect(bx, y, bw, 8);
+      ctx.fillStyle=rColors[ri];
+      ctx.globalAlpha=0.8;
+      ctx.fillRect(bx, y, bw*prob[ri], 8);
+      ctx.globalAlpha=1;
+    });
+    
+    // cutoff line
+    const cutoffX=bx+bw*0.8;
+    ctx.strokeStyle='rgba(247,167,62,0.8)'; ctx.lineWidth=1.5;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(cutoffX,startY-4); ctx.lineTo(cutoffX,startY+RANKS.length*10+4); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(247,167,62,0.8)'; ctx.font='10px system-ui'; ctx.textAlign='center';
+    ctx.fillText('0.8', cutoffX, startY+RANKS.length*10+14);
+    
+    // legend
+    ctx.fillStyle='rgba(0,212,170,0.8)'; ctx.font='10px system-ui'; ctx.textAlign='left';
+    ctx.fillText('■ matches prediction', startX, H-10);
+    ctx.fillStyle='rgba(139,146,184,0.4)';
+    ctx.fillText('■ different result', startX+130, H-10);
+    
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─── Confidence bar chart canvas ──────────────────────────────────────────────
+(function(){
+  const c=document.getElementById('confCanvas');
+  const W=c.offsetWidth||1060, H=180; c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+  const BG='#1a1d27';
+  const ranks=['Domain','Phylum','Class','Order','Family','Genus'];
+  const confs=[1.0,0.99,0.97,0.93,0.88,0.76];
+  const colors=['#f7a73e','#e05aff','#00d4aa','#6c63ff','#ff6b6b','#48bb78'];
+  let t=0;
+  function draw(){
+    t+=0.02;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
+    const n=ranks.length, pad=60, top=24, bottom=40;
+    const barW=Math.floor((W-pad*2)/n);
+    const chartH=H-top-bottom;
+    // grid lines
+    [0.2,0.4,0.6,0.8,1.0].forEach(v=>{
+      const y=top+chartH*(1-v);
+      ctx.strokeStyle=`rgba(46,50,80,${v===0.8?0.8:0.4})`;
+      ctx.lineWidth=v===0.8?1.5:1;
+      ctx.setLineDash(v===0.8?[4,4]:[]);
+      ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(W-pad,y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle=v===0.8?'rgba(247,167,62,0.8)':'rgba(139,146,184,0.4)';
+      ctx.font=`${v===0.8?'bold ':''  }10px system-ui`; ctx.textAlign='right';
+      ctx.fillText(v.toFixed(1), pad-6, y+4);
+    });
+    // cutoff label
+    ctx.fillStyle='rgba(247,167,62,0.8)'; ctx.font='bold 10px system-ui'; ctx.textAlign='left';
+    ctx.fillText('cutoff 0.8', W-pad+4, top+chartH*0.2+4);
+    
+    // bars
+    ranks.forEach((r,i)=>{
+      const bh=chartH*confs[i];
+      const x=pad+i*barW+barW*0.1;
+      const bw2=barW*0.8;
+      const y=top+chartH-bh;
+      const pulse=Math.sin(t+i*0.5)*0.01;
+      // shadow
+      ctx.fillStyle=`rgba(0,0,0,0.3)`;
+      ctx.fillRect(x+2,y+2,bw2,bh);
+      // bar
+      const grd=ctx.createLinearGradient(x,y,x,y+bh);
+      grd.addColorStop(0,colors[i]);
+      grd.addColorStop(1,colors[i]+'55');
+      ctx.fillStyle=grd;
+      ctx.beginPath();
+      ctx.roundRect(x,y+pulse*chartH,bw2,bh,4);
+      ctx.fill();
+      // below-cutoff overlay
+      if(confs[i]<0.8){
+        ctx.fillStyle='rgba(255,107,107,0.15)';
+        ctx.fillRect(x,y,bw2,bh);
+        ctx.strokeStyle='rgba(255,107,107,0.5)'; ctx.lineWidth=1;
+        ctx.strokeRect(x,y,bw2,bh);
+      }
+      // label
+      ctx.fillStyle=colors[i]; ctx.font='bold 10px system-ui'; ctx.textAlign='center';
+      ctx.fillText(r, x+bw2/2, H-bottom+14);
+      ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.font='10px system-ui';
+      ctx.fillText(confs[i].toFixed(2), x+bw2/2, y-5);
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ─── Pipeline canvas ──────────────────────────────────────────────────────────
+(function(){
+  const c=document.getElementById('pipelineCanvas');
+  const W=c.offsetWidth||1060, H=160; c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+  const BG='#1a1d27';
+  const steps=[
+    {label:'Raw Reads',   sub:'FASTQ',          color:'#4a5568'},
+    {label:'Quality Filter', sub:'fastq_filter', color:'#6c63ff'},
+    {label:'Dereplicate', sub:'fastx_uniques',  color:'#9b94ff'},
+    {label:'UNOISE3',     sub:'denoise → ASVs', color:'#00d4aa'},
+    {label:'SINTAX',      sub:'taxonomy assign', color:'#f7a73e'},
+    {label:'OTU Table',   sub:'otutab + sintax_summary', color:'#48bb78'},
+  ];
+  let t=0;
+  function draw(){
+    t+=0.02;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
+    const n=steps.length;
+    const boxW=Math.min(130,(W-40)/n-18);
+    const boxH=64;
+    const startX=(W-(boxW*n+28*(n-1)))/2;
+    const y=H/2-boxH/2;
+    steps.forEach((s,i)=>{
+      const x=startX+i*(boxW+28);
+      const cx=x+boxW/2;
+      let glow=0;
+      if(i===4) glow=(Math.sin(t)+1)/2;
+      if(glow>0){
+        ctx.beginPath(); ctx.roundRect(x-4,y-4,boxW+8,boxH+8,10);
+        ctx.fillStyle=`rgba(247,167,62,${glow*0.2})`; ctx.fill();
+      }
+      ctx.beginPath(); ctx.roundRect(x,y,boxW,boxH,8);
+      ctx.fillStyle='#22263a'; ctx.fill();
+      ctx.strokeStyle=s.color; ctx.lineWidth=i===4?2:1.5; ctx.stroke();
+      ctx.fillStyle=s.color; ctx.font='bold 11px system-ui';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(s.label, cx, y+boxH*0.38);
+      ctx.fillStyle='rgba(139,146,184,0.7)'; ctx.font='9px system-ui';
+      ctx.fillText(s.sub, cx, y+boxH*0.68);
+      if(i<n-1){
+        const ax=x+boxW+2, ex=ax+24, ay=y+boxH/2;
+        const dotX=ax+(ex-ax)*((Math.sin(t+i)+1)/2);
+        ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ex,ay);
+        ctx.strokeStyle='rgba(46,50,80,1)'; ctx.lineWidth=2; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ex,ay); ctx.lineTo(ex-7,ay-4); ctx.lineTo(ex-7,ay+4);
+        ctx.closePath(); ctx.fillStyle='rgba(139,146,184,0.5)'; ctx.fill();
+        ctx.beginPath(); ctx.arc(dotX,ay,3,0,Math.PI*2);
+        ctx.fillStyle=steps[i].color; ctx.fill();
+      }
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+</body>
+</html>

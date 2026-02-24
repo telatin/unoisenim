@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UCHIME2 & UNOISE3 Algorithms</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --accent1: #B6BE00ff;
+      --accent2: #097E74ff;
+      --accent3: #B6BE00ff;
+      --accent4: #ffd166;
+      --text: #e8eaf0;
+      --muted: #8b92b8;
+      --border: #2e3250;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      line-height: 1.6;
+    }
+
+    /* NAV */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 17, 23, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      padding: 0.8rem 2rem;
+    }
+
+    nav .logo {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--accent1);
+      letter-spacing: 1px;
+    }
+
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+
+    nav a:hover {
+      color: var(--text);
+    }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 5rem 2rem 3rem;
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(108, 99, 255, 0.18) 0%, transparent 70%);
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff 30%, var(--accent1));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 1rem auto 0;
+    }
+
+    .pill-row {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 1.5rem;
+    }
+
+    .pill {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 0.3rem 1rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* LAYOUT */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    section {
+      margin-bottom: 4rem;
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--accent2);
+    }
+
+    p {
+      color: var(--muted);
+      margin-bottom: 0.9rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-purple {
+      background: rgba(108, 99, 255, 0.2);
+      color: var(--accent1);
+    }
+
+    .badge-teal {
+      background: rgba(0, 212, 170, 0.15);
+      color: var(--accent2);
+    }
+
+    .badge-red {
+      background: rgba(255, 107, 107, 0.15);
+      color: var(--accent3);
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.2rem;
+      margin-top: 1.5rem;
+    }
+
+    /* ALGORITHM STEP FLOW */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-top: 1.5rem;
+    }
+
+    .step {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      position: relative;
+      padding-bottom: 1.5rem;
+    }
+
+    .step:last-child {
+      padding-bottom: 0;
+    }
+
+    .step::before {
+      content: '';
+      position: absolute;
+      left: 20px;
+      top: 42px;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+
+    .step:last-child::before {
+      display: none;
+    }
+
+    .step-icon {
+      min-width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .step-body {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+    }
+
+    .step-body strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      color: var(--text);
+    }
+
+    .step-body p {
+      margin: 0;
+      font-size: 0.9rem;
+    }
+
+    /* TWO COL */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 700px) {
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* DIVIDER */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 3rem 0;
+    }
+
+    /* CANVAS */
+    canvas {
+      display: block;
+    }
+
+    .canvas-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    /* FORMULA */
+    .formula {
+      background: var(--surface2);
+      border-left: 3px solid var(--accent1);
+      border-radius: 6px;
+      padding: 0.8rem 1.2rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: var(--accent2);
+      margin: 0.8rem 0;
+    }
+
+    /* COMPARISON TABLE */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: var(--surface2);
+      padding: 0.7rem 1rem;
+      text-align: left;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    td {
+      padding: 0.7rem 1rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    tr:hover td {
+      background: var(--surface2);
+    }
+
+    /* TOOLTIP */
+    [data-tip] {
+      position: relative;
+      cursor: help;
+      border-bottom: 1px dashed var(--muted);
+    }
+
+    [data-tip]::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #111;
+      color: #eee;
+      font-size: 0.78rem;
+      padding: 0.4rem 0.7rem;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 10;
+      border: 1px solid var(--border);
+    }
+
+    [data-tip]:hover::after {
+      opacity: 1;
+    }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--border);
+      font-size: 0.82rem;
+      border-top: 1px solid var(--border);
+    }
+
+    footer a {
+      color: var(--muted);
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav>
+    <span class="logo">🧬 Amplicon Algorithms</span>
+    <a href="#unoise3">UNOISE3</a>
+    <a href="#uchime2">UCHIME2</a>
+    <a href="#comparison">Comparison</a>
+    <a href="#pipeline">Pipeline</a>
+  </nav>
+
+  <div class="hero">
+    <h1>UNOISE3 & UCHIME2</h1>
+    <p>Amplicon denoising and chimera detection algorithms powering modern microbiome analysis</p>
+    <div class="pill-row">
+      <span class="pill">16S rRNA</span>
+      <span class="pill">ITS</span>
+      <span class="pill">Illumina reads</span>
+      <span class="pill">ASV denoising</span>
+      <span class="pill">Chimera filtering</span>
+    </div>
+  </div>
+
+  <main>
+
+    <!-- ======================== UNOISE3 ======================== -->
+    <section id="unoise3">
+      <span class="badge badge-teal">Denoising</span>
+      <h2 style="color: var(--accent2); margin-top:0.4rem;">UNOISE3 Algorithm</h2>
+      <p>UNOISE3 performs <strong style="color:var(--text)">error-correction (denoising)</strong> on amplicon reads,
+        recovering correct biological sequences — called <span
+          data-tip="Amplicon Sequence Variants: exact biological sequences, finer resolution than OTUs">ASVs</span> —
+        and resolving sequences differing by even a single nucleotide.</p>
+
+      <div class="two-col" style="margin-top:1.5rem;">
+        <div>
+          <h3>Core Idea</h3>
+          <p>For each unique read X with high abundance, UNOISE asks: are the lower-abundance neighbors of X just
+            error-laden copies of X, or genuine biological sequences?</p>
+          <div class="formula">score(a, d) = β(d) × γ(a_ratio)<br>β(d) = 0.5^(d × 1/α)<br>γ = a_X / a_Y</div>
+          <p style="font-size:0.85rem;">Where <em>d</em> = edit distance, <em>a</em> = abundance. Sequences with score
+            &lt; 1 are flagged as errors.</p>
+        </div>
+        <div>
+          <h3>Two Sources of Bad Reads</h3>
+          <div class="steps">
+            <div class="step">
+              <div class="step-icon" style="background: rgba(255,107,107,0.2); color: var(--accent3);">1</div>
+              <div class="step-body"><strong>PCR & sequencing errors</strong>
+                <p>Point substitutions and indels introduced during amplification or sequencing. Usually low-abundance
+                  compared to parent.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-icon" style="background: rgba(255,107,107,0.2); color: var(--accent3);">2</div>
+              <div class="step-body"><strong>Chimeric sequences</strong>
+                <p>PCR artefacts formed by two parents joining mid-amplification. Handled by the integrated UCHIME3
+                  step.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Animated neighbourhood canvas -->
+      <div class="canvas-wrap" style="margin-top:1.5rem;">
+        <canvas id="noiseCanvas" width="1060" height="320"></canvas>
+      </div>
+      <p style="font-size:0.8rem; color:var(--border); margin-top:0.5rem; text-align:center;">Animated: UNOISE3
+        neighbourhood model. Green = correct biological sequence; Red = error read; size = abundance. Hover over dots.
+      </p>
+
+      <!-- Steps -->
+      <h3 style="margin-top:2rem;">Algorithm Steps</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-icon" style="background: rgba(0,212,170,0.15); color: var(--accent2);">1</div>
+          <div class="step-body"><strong>Sort by abundance (descending)</strong>
+            <p>Process most abundant unique reads first. Each becomes a candidate ASV.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-icon" style="background: rgba(0,212,170,0.15); color: var(--accent2);">2</div>
+          <div class="step-body"><strong>Pairwise distance comparison</strong>
+            <p>Compare each read to all confirmed ASVs using edit distance d. Check if score(a, d) ≥ 1 (genuine) or &lt;
+              1 (error of known ASV).</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-icon" style="background: rgba(0,212,170,0.15); color: var(--accent2);">3</div>
+          <div class="step-body"><strong>Abundance threshold filter (minsize)</strong>
+            <p>Reads below a minimum abundance (default: 2) are discarded as likely singleton errors regardless of
+              score.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-icon" style="background: rgba(0,212,170,0.15); color: var(--accent2);">4</div>
+          <div class="step-body"><strong>Chimera detection (UCHIME3 de novo)</strong>
+            <p>Remaining sequences are checked for chimeric origin against the growing set of confirmed ASVs.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-icon" style="background: rgba(0,212,170,0.15); color: var(--accent2);">5</div>
+          <div class="step-body"><strong>Output ZOTUs/ASVs</strong>
+            <p>High-quality denoised sequences output. OTU table built separately with <code>otutab</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>✅ Strengths</h3>
+          <p style="font-size:0.9rem;">Single-nucleotide resolution. Resolves species/strains &gt;97% similar. No
+            arbitrary clustering threshold. Integrated chimera removal.</p>
+        </div>
+        <div class="card">
+          <h3>⚠️ Limitations</h3>
+          <p style="font-size:0.9rem;">Designed specifically for Illumina reads. Performance degrades on 454, Ion
+            Torrent, or PacBio due to different error profiles.</p>
+        </div>
+        <div class="card">
+          <h3>⚙️ Key Parameters</h3>
+          <p style="font-size:0.9rem;"><code>-minsize 2</code> — minimum abundance<br><code>-unoise_alpha 2.0</code> —
+            controls sensitivity<br><code>-tabbedout</code> — per-read classifications</p>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ======================== UCHIME2 ======================== -->
+    <section id="uchime2">
+      <span class="badge badge-purple">Chimera Detection</span>
+      <h2 style="color: var(--accent1); margin-top:0.4rem;">UCHIME2 Algorithm</h2>
+      <p>UCHIME2 detects <span
+          data-tip="Chimeras: PCR artefacts formed by partial amplification of one sequence priming onto another template">chimeric
+          sequences</span> — PCR artefacts formed when a partial amplicon from one template anneals to a different
+        template, producing a hybrid sequence. It extends the original UCHIME with improved scoring and filtering.</p>
+
+      <!-- Chimera schematic canvas -->
+      <div class="canvas-wrap" style="margin-top:1.5rem;">
+        <canvas id="chimeraCanvas" width="1060" height="260"></canvas>
+      </div>
+      <p style="font-size:0.8rem; color:var(--border); margin-top:0.5rem; text-align:center;">Animated: chimera
+        formation during PCR. A partial amplicon from Parent A mis-primes onto Parent B.</p>
+
+      <div class="two-col" style="margin-top:2rem;">
+        <div>
+          <h3>The Chimera Score (H)</h3>
+          <p>A candidate query Q is divided at a crossover point into left (L) and right (R) segments. Two parents P1
+            and P2 are found in the reference to best explain each half:</p>
+          <div class="formula">H = (id(Q, P1·P2) − id(Q, best_parent))<br> / penalty(β, d)</div>
+          <p style="font-size:0.85rem;">If H exceeds a threshold, Q is flagged as chimeric. The score penalises
+            low-divergence parents to reduce false positives.</p>
+        </div>
+        <div>
+          <h3>Reference vs De Novo</h3>
+          <div class="steps">
+            <div class="step">
+              <div class="step-icon" style="background:rgba(108,99,255,0.2); color:var(--accent1);">R</div>
+              <div class="step-body"><strong>Reference-based (uchime2_ref)</strong>
+                <p>Parents searched from a large external database (SILVA for 16S, UNITE for ITS). Requires denoised
+                  inputs for low FP/FN.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-icon" style="background:rgba(108,99,255,0.2); color:var(--accent1);">D</div>
+              <div class="step-body"><strong>De novo (uchime3_denovo)</strong>
+                <p>Parents are the higher-abundance sequences within the same dataset. Integrated into UNOISE3 pipeline.
+                  Uses adjusted parameters to minimise false positives.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:2rem;">Algorithm Steps</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-icon" style="background:rgba(108,99,255,0.2); color:var(--accent1);">1</div>
+          <div class="step-body"><strong>Word-based parent search</strong>
+            <p>Candidate parents for query Q identified by k-mer similarity search against the reference/database.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-icon" style="background:rgba(108,99,255,0.2); color:var(--accent1);">2</div>
+          <div class="step-body"><strong>Alignment & scoring chunks</strong>
+            <p>Q is divided into 4 chunks (by default). Each chunk is aligned to candidate parents. Voting identifies
+              best left- and right-parent pair.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-icon" style="background:rgba(108,99,255,0.2); color:var(--accent1);">3</div>
+          <div class="step-body"><strong>Score chimeric hypothesis</strong>
+            <p>Compute H score: how much better is (P1 left + P2 right) vs best single parent? High H → chimera.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-icon" style="background:rgba(108,99,255,0.2); color:var(--accent1);">4</div>
+          <div class="step-body"><strong>Classify: chimeric / borderline / non-chimeric</strong>
+            <p>Three-way output allows downstream filtering. Borderline sequences carry uncertainty flags.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>📌 Best Practice</h3>
+          <p style="font-size:0.9rem;">Use uchime2_ref with the <strong style="color:var(--text)">largest available
+              database</strong> (SILVA/UNITE). Small "gold" databases miss many parents, causing poor sensitivity.</p>
+        </div>
+        <div class="card">
+          <h3>🔗 UCHIME2 vs UCHIME3</h3>
+          <p style="font-size:0.9rem;">UCHIME3 (uchime3_denovo) is the de novo variant built into UNOISE3, with tuned
+            parameters to reduce false positives. UCHIME2 is recommended for reference-based mode.</p>
+        </div>
+        <div class="card">
+          <h3>⚙️ Key Parameters</h3>
+          <p style="font-size:0.9rem;"><code>-uchimealns</code> — alignment output<br><code>-minh 0.28</code> — minimum
+            H score<br><code>-mindiv 0.8</code> — min parent divergence</p>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ======================== COMPARISON ======================== -->
+    <section id="comparison">
+      <h2>Algorithm Comparison</h2>
+      <p>Choosing between the approaches depends on your data type and pipeline stage.</p>
+      <div class="card" style="margin-top:1.5rem; padding:0; overflow:hidden;">
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th style="color:var(--accent2)">UNOISE3</th>
+              <th style="color:var(--accent1)">UCHIME2 (ref)</th>
+              <th style="color:var(--accent1)">UCHIME3 (de novo)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Primary purpose</td>
+              <td>Denoising + chimera removal</td>
+              <td>Chimera detection only</td>
+              <td>Chimera detection (de novo)</td>
+            </tr>
+            <tr>
+              <td>Output</td>
+              <td>ASVs / ZOTUs</td>
+              <td>Chimera labels</td>
+              <td>Chimera labels</td>
+            </tr>
+            <tr>
+              <td>Requires reference DB</td>
+              <td>No</td>
+              <td>Yes (SILVA, UNITE)</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td>Works on raw reads?</td>
+              <td>Yes (Illumina)</td>
+              <td>Only if denoised first</td>
+              <td>Only if denoised first</td>
+            </tr>
+            <tr>
+              <td>Resolution</td>
+              <td>Single-nucleotide</td>
+              <td>—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td>Best for 16S/ITS?</td>
+              <td>✅ Yes</td>
+              <td>⚠️ Only with denoised input</td>
+              <td>✅ Integrated in UNOISE3</td>
+            </tr>
+            <tr>
+              <td>Platform</td>
+              <td>Illumina only</td>
+              <td>Any</td>
+              <td>Any (if denoised)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ======================== PIPELINE ======================== -->
+    <section id="pipeline">
+      <h2>Recommended Pipeline</h2>
+      <p>The USEARCH-recommended workflow for 16S/ITS amplicon analysis on Illumina data:</p>
+      <div class="canvas-wrap" style="margin-top:1.5rem;">
+        <canvas id="pipelineCanvas" width="1060" height="160"></canvas>
+      </div>
+      <div class="card-grid" style="margin-top:1.5rem;">
+        <div class="card">
+          <h3>1. Quality filter</h3>
+          <p style="font-size:0.9rem;"><code>fastq_filter</code> — remove low-quality reads, truncate to fixed length
+          </p>
+        </div>
+        <div class="card">
+          <h3>2. Dereplicate</h3>
+          <p style="font-size:0.9rem;"><code>fastx_uniques</code> — collapse identical reads, track abundances</p>
+        </div>
+        <div class="card">
+          <h3>3. Denoise</h3>
+          <p style="font-size:0.9rem;"><code>unoise3</code> — error-correct + chimera filter → ZOTUs/ASVs</p>
+        </div>
+        <div class="card">
+          <h3>4. OTU table</h3>
+          <p style="font-size:0.9rem;"><code>otutab</code> — map original reads back to ZOTUs to get abundance table</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    Based on documentation from <a href="https://www.drive5.com/usearch/manual/uchime2_algo.html"
+      target="_blank">drive5.com/usearch</a> by Robert C. Edgar.
+    UNOISE2 paper: <a href="https://doi.org/10.1101/081257" target="_blank">Edgar 2016</a>.
+  </footer>
+
+  <script>
+    // ─── Utility ────────────────────────────────────────────────────────────────
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function hexToRgb(hex) {
+      const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return r ? [parseInt(r[1], 16), parseInt(r[2], 16), parseInt(r[3], 16)] : [255, 255, 255];
+    }
+
+    // ─── UNOISE neighbourhood canvas ────────────────────────────────────────────
+    (function () {
+      const c = document.getElementById('noiseCanvas');
+      const W = c.offsetWidth || 1060, H = 320;
+      c.width = W; c.height = H;
+      const ctx = c.getContext('2d');
+
+      const BG = '#1a1d27';
+      const CENTER_X = W / 2, CENTER_Y = H / 2;
+      const MAX_R = Math.min(W, H) * 0.42;
+
+      // circles at radii d=0..4
+      const nodes = [
+        // d=0: central correct, large
+        { x: 0, y: 0, r: 28, good: true, label: 'X', d: 0, anim: 0 },
+        // d=1
+        { x: 1, y: 0, r: 7, good: false, label: '', d: 1 },
+        { x: -0.8, y: 0.6, r: 5, good: false, label: '', d: 1 },
+        { x: 0.2, y: -1, r: 4, good: false, label: '', d: 1 },
+        // d=2
+        { x: 2, y: 0.4, r: 16, good: true, label: 'b', d: 2 },
+        { x: 1.5, y: -1.5, r: 5, good: false, label: '', d: 2 },
+        { x: -1.5, y: 1.5, r: 8, good: false, label: 'f', d: 2 },  // borderline
+        { x: 0.5, y: 2, r: 4, good: false, label: '', d: 2 },
+        // d=3
+        { x: 2.5, y: 1.5, r: 9, good: false, label: 'e', d: 3 },  // false negative
+        { x: -2, y: -1, r: 6, good: false, label: '', d: 3 },
+        { x: -0.5, y: 2.5, r: 4, good: false, label: '', d: 3 },
+        // d=4
+        { x: 3, y: 0, r: 11, good: true, label: 'g', d: 4 },  // low abundance correct
+        { x: -3, y: 0.5, r: 4, good: false, label: '', d: 4 },
+      ];
+
+      // convert relative coords to pixel coords
+      const scale = MAX_R / 4;
+      nodes.forEach(n => {
+        n.px = CENTER_X + n.x * scale;
+        n.py = CENTER_Y + n.y * scale;
+        n.phase = Math.random() * Math.PI * 2;
+        n.speed = 0.4 + Math.random() * 0.3;
+        n.origPx = n.px; n.origPy = n.py;
+      });
+
+      let t = 0;
+      function draw() {
+        t += 0.015;
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = BG;
+        ctx.fillRect(0, 0, W, H);
+
+        // distance rings
+        for (let d = 1; d <= 4; d++) {
+          ctx.beginPath();
+          ctx.arc(CENTER_X, CENTER_Y, d * scale, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(46,50,80,${0.6 - d * 0.1})`;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 6]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = 'rgba(139,146,184,0.4)';
+          ctx.font = '11px system-ui';
+          ctx.fillText(`d=${d}`, CENTER_X + d * scale - 12, CENTER_Y + 14);
+        }
+
+        // axis label
+        ctx.fillStyle = 'rgba(139,146,184,0.5)';
+        ctx.font = '11px system-ui';
+        ctx.fillText('Sequence differences from X', CENTER_X - 90, H - 12);
+
+        // nodes
+        nodes.forEach(n => {
+          const bobX = Math.sin(t * n.speed + n.phase) * 1.5;
+          const bobY = Math.cos(t * n.speed * 0.7 + n.phase) * 1.5;
+          const nx = n.origPx + bobX, ny = n.origPy + bobY;
+
+          // glow
+          const col = n.good ? [0, 212, 170] : [255, 107, 107];
+          const grd = ctx.createRadialGradient(nx, ny, 0, nx, ny, n.r * 2);
+          grd.addColorStop(0, `rgba(${col},0.25)`);
+          grd.addColorStop(1, `rgba(${col},0)`);
+          ctx.beginPath();
+          ctx.arc(nx, ny, n.r * 2, 0, Math.PI * 2);
+          ctx.fillStyle = grd;
+          ctx.fill();
+
+          // circle
+          ctx.beginPath();
+          ctx.arc(nx, ny, n.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${col},0.85)`;
+          ctx.fill();
+
+          // label
+          if (n.label) {
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${Math.max(10, n.r * 0.75)}px system-ui`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(n.label, nx, ny);
+          }
+        });
+
+        // legend
+        const lx = 16, ly = H - 52;
+        [[0, 212, 170, 'Correct biological sequence'], [255, 107, 107, 'Sequencing / PCR error']].forEach(([r, g, b, label], i) => {
+          ctx.beginPath();
+          ctx.arc(lx + 8, ly + i * 22, 7, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${r},${g},${b},0.85)`;
+          ctx.fill();
+          ctx.fillStyle = 'rgba(139,146,184,0.8)';
+          ctx.font = '11px system-ui';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, lx + 20, ly + i * 22);
+        });
+
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+
+    // ─── Chimera formation canvas ───────────────────────────────────────────────
+    (function () {
+      const c = document.getElementById('chimeraCanvas');
+      const W = c.offsetWidth || 1060, H = 260;
+      c.width = W; c.height = H;
+      const ctx = c.getContext('2d');
+
+      const BG = '#1a1d27';
+      let t = 0;
+      const SEQ_LEN = Math.min(W * 0.55, 480);
+      const CX = W / 2;
+
+      function drawSeq(x, y, len, leftColor, rightColor, split, label, alpha = 1) {
+        const lx = x - len / 2;
+        // left half
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.roundRect(lx, y - 12, len * split, 24, 4);
+        ctx.fillStyle = leftColor;
+        ctx.fill();
+        // right half
+        ctx.beginPath();
+        ctx.roundRect(lx + len * split, y - 12, len * (1 - split), 24, 4);
+        ctx.fillStyle = rightColor;
+        ctx.fill();
+        // border
+        ctx.beginPath();
+        ctx.roundRect(lx, y - 12, len, 24, 4);
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // label
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.font = 'bold 12px system-ui';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, lx - 30, y);
+        ctx.globalAlpha = 1;
+      }
+
+      const colorA1 = '#6c63ff', colorA2 = '#9b94ff'; // parent A shades
+      const colorB1 = '#00d4aa', colorB2 = '#33e0be'; // parent B shades
+      const crossover = 0.45;
+
+      function draw() {
+        t += 0.008;
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = BG;
+        ctx.fillRect(0, 0, W, H);
+
+        const phase = (Math.sin(t) + 1) / 2; // 0..1
+
+        // Parent A
+        drawSeq(CX, 48, SEQ_LEN, colorA1, colorA2, 1, 'Parent A');
+        // Parent B
+        drawSeq(CX, 108, SEQ_LEN, colorB1, colorB2, 0, 'Parent B');
+
+        // Chimera (morphs in)
+        const chAlpha = Math.min(1, phase * 2);
+        const chY = lerp(48, 190, Math.min(1, phase * 1.4));
+        drawSeq(CX, chY, SEQ_LEN, colorA1, colorB2, crossover, 'Chimera', chAlpha);
+
+        // crossover arrow
+        if (phase > 0.3) {
+          const arrowAlpha = Math.min(1, (phase - 0.3) * 3);
+          ctx.globalAlpha = arrowAlpha;
+          const lx = CX - SEQ_LEN / 2;
+          const cx2 = lx + SEQ_LEN * crossover;
+          ctx.beginPath();
+          ctx.moveTo(cx2, 60);
+          ctx.lineTo(cx2, 102);
+          ctx.strokeStyle = '#ffd166';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([3, 3]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          // label
+          ctx.fillStyle = '#ffd166';
+          ctx.font = '11px system-ui';
+          ctx.textAlign = 'center';
+          ctx.fillText('crossover', cx2, 82);
+          ctx.globalAlpha = 1;
+        }
+
+        // labels on sequences
+        const y3 = 190;
+        if (phase > 0.5) {
+          const labelAlpha = Math.min(1, (phase - 0.5) * 3);
+          ctx.globalAlpha = labelAlpha;
+          const lx = CX - SEQ_LEN / 2;
+          ctx.fillStyle = 'rgba(108,99,255,0.9)';
+          ctx.font = '10px system-ui';
+          ctx.textAlign = 'center';
+          ctx.fillText('← from Parent A →', lx + SEQ_LEN * crossover / 2, y3 + 20);
+          ctx.fillStyle = 'rgba(0,212,170,0.9)';
+          ctx.fillText('← from Parent B →', lx + SEQ_LEN * crossover + SEQ_LEN * (1 - crossover) / 2, y3 + 20);
+          ctx.globalAlpha = 1;
+        }
+
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+
+    // ─── Pipeline canvas ────────────────────────────────────────────────────────
+    (function () {
+      const c = document.getElementById('pipelineCanvas');
+      const W = c.offsetWidth || 1060, H = 160;
+      c.width = W; c.height = H;
+      const ctx = c.getContext('2d');
+
+      const BG = '#1a1d27';
+      const steps = [
+        { label: 'Raw Reads', sub: 'FASTQ', color: '#4a5568' },
+        { label: 'Quality Filter', sub: 'fastq_filter', color: '#6c63ff' },
+        { label: 'Dereplicate', sub: 'fastx_uniques', color: '#9b94ff' },
+        { label: 'UNOISE3', sub: 'denoise + chimera', color: '#00d4aa' },
+        { label: 'OTU Table', sub: 'otutab', color: '#ffd166' },
+        { label: 'ZOTUs / ASVs', sub: 'biom/txt', color: '#48bb78' },
+      ];
+
+      let t = 0;
+      function draw() {
+        t += 0.02;
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = BG;
+        ctx.fillRect(0, 0, W, H);
+
+        const n = steps.length;
+        const boxW = Math.min(130, (W - 40) / n - 20);
+        const boxH = 64;
+        const startX = (W - (boxW * n + 30 * (n - 1))) / 2;
+        const y = H / 2 - boxH / 2;
+
+        steps.forEach((s, i) => {
+          const x = startX + i * (boxW + 30);
+          const cx = x + boxW / 2;
+
+          // animated pulse on UNOISE3 step (index 3)
+          let glow = 0;
+          if (i === 3) glow = (Math.sin(t) + 1) / 2;
+
+          if (glow > 0) {
+            ctx.beginPath();
+            ctx.roundRect(x - 4, y - 4, boxW + 8, boxH + 8, 10);
+            ctx.fillStyle = `rgba(0,212,170,${glow * 0.2})`;
+            ctx.fill();
+          }
+
+          // box
+          ctx.beginPath();
+          ctx.roundRect(x, y, boxW, boxH, 8);
+          ctx.fillStyle = '#22263a';
+          ctx.fill();
+          ctx.strokeStyle = s.color;
+          ctx.lineWidth = i === 3 ? 2 : 1.5;
+          ctx.stroke();
+
+          // label
+          ctx.fillStyle = s.color;
+          ctx.font = `bold 12px system-ui`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(s.label, cx, y + boxH * 0.38);
+
+          ctx.fillStyle = 'rgba(139,146,184,0.7)';
+          ctx.font = '10px system-ui';
+          ctx.fillText(s.sub, cx, y + boxH * 0.68);
+
+          // arrow
+          if (i < n - 1) {
+            const ax = x + boxW + 2;
+            const ay = y + boxH / 2;
+            const ex = ax + 26;
+            // animated dot
+            const dotX = ax + (ex - ax) * ((Math.sin(t + i) + 1) / 2);
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(ex, ay);
+            ctx.strokeStyle = 'rgba(46,50,80,1)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            // arrowhead
+            ctx.beginPath();
+            ctx.moveTo(ex, ay);
+            ctx.lineTo(ex - 7, ay - 4);
+            ctx.lineTo(ex - 7, ay + 4);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(139,146,184,0.5)';
+            ctx.fill();
+            // moving dot
+            ctx.beginPath();
+            ctx.arc(dotX, ay, 3, 0, Math.PI * 2);
+            ctx.fillStyle = steps[i].color;
+            ctx.fill();
+          }
+        });
+
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+  </script>
+</body>
+
+</html>
