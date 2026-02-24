@@ -48,6 +48,7 @@ proc main() =
   let idx = buildIndex(dbSeqs, taxStrings)
   let t1 = cpuTime()
   echo "Index built in ", (t1 - t0), " seconds."
+  var state = initSintaxState(idx)
 
   var tabF: File
   let writeTab = opts.tabbedout != ""
@@ -59,7 +60,7 @@ proc main() =
   let t2 = cpuTime()
 
   while readFastx(fQ, record):
-    let hit = sintax(record.sequence, idx)
+    let hit = sintaxWithState(record.sequence, idx, state)
     var outTax = ""
     var passedTax = ""
     if hit.rankNames.len > 0:

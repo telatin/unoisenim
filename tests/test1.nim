@@ -87,6 +87,30 @@ suite "sintax":
     check hit.strand == '-'
     check hit.rankNames == @["d:Bacteria", "p:Firmicutes", "g:Testus"]
 
+  test "sintax ignores words spanning ambiguous letters":
+    let dbSeq = "ACGTCAGTGCATGACCTGTAAGACGT"
+    let idx = buildIndex(@[dbSeq], @["d:Bacteria,p:Firmicutes,g:Testus"])
+    let badQuery = "ACGNACGNACGNACGNACGNACGN"
+    let hit = sintax(badQuery, idx)
+    check hit.rankNames.len == 0
+    check hit.rankProbs.len == 0
+
+  test "sintax groups duplicated taxonomy strings":
+    let s1 = "ACGTCAGTGCATGACCTGTAAGACGT"
+    let s2 = "ACGTCAGTGCATGACCTGTAAGACGA"
+    let s3 = "ACGTCAGTGCATGACCTGTAAGACGC"
+    let idx = buildIndex(
+      @[s1, s2, s3],
+      @[
+        "d:Bacteria,p:Firmicutes,g:Alpha",
+        "d:Bacteria,p:Firmicutes,g:Alpha",
+        "d:Bacteria,p:Actinobacteria,g:Beta"
+      ]
+    )
+    let hit = sintax(s1, idx, bootSubset = 32, bootIters = 100)
+    check hit.rankNames.len == 3
+    check hit.rankNames[2] == "g:Alpha"
+
 suite "nbc":
   test "parseTaxRanks splits comma-delimited taxonomy":
     let ranks = parseTaxRanks("d:Bacteria,p:Firmicutes,g:Testus")
