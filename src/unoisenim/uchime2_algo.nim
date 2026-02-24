@@ -1,3 +1,12 @@
+## UCHIME2 chimera detection for ZOTU candidates.
+##
+## Implements the UCHIME2 algorithm to identify chimeric sequences among
+## UNOISE centroid candidates using global pairwise alignment and the
+## UCHIME scoring model.
+##
+## Supports single-threaded (parent-filtered, closest to USEARCH de novo) and
+## multi-threaded modes via the `malebolgia` thread pool.
+
 const
   AlignBand = 16
   AlignInf = 32000'i16
@@ -12,6 +21,8 @@ import unoise_algo
 
 type
   AlignPath* = seq[char]
+    ## Global alignment path encoded as a sequence of CIGAR-like operations:
+    ## ``'M'`` match/mismatch, ``'D'`` deletion in query, ``'I'`` insertion in query.
 
 proc ensureAlignCapacity(lenQ, lenT: int) =
   if traceMat.len == 0:
@@ -35,6 +46,12 @@ proc ensureAlignCapacity(lenQ, lenT: int) =
       traceMat[i].setLen(newLen)
 
 proc globalAlign*(q, t: string, path: var AlignPath): int =
+  ## Computes the global (Needleman-Wunsch) alignment between query ``q``
+  ## and target ``t`` using a banded approach (band width = 16).
+  ##
+  ## Fills ``path`` with the alignment operations and returns the edit
+  ## distance (number of differences).  Returns a large sentinel value and
+  ## an empty path when the sequences differ in length by more than the band.
   let lenQ = q.len
   let lenT = t.len
   ensureAlignCapacity(lenQ, lenT)
@@ -134,8 +151,18 @@ proc globalAlign*(q, t: string, path: var AlignPath): int =
 
   return int(score)
 
-proc getLeftRight*(q, t: string, path: AlignPath): tuple[diffs, posL0, posL1,
-    posR0, posR1: int] =
+proc getLeftRight*(q, t: string, path: AlignPath): tuple[diffs, posL0,
+    posL1, posR0, posR1: int] =
+  ## Locates the first and last differences in an alignment path.
+  ##
+  ## Returns a tuple of:
+  ## * ``diffs``  — total number of differences
+  ## * ``posL0``  — query position just before the first difference
+  ## * ``posL1``  — query position just before the second difference
+  ## * ``posR0``  — query position just after the last difference
+  ## * ``posR1``  — query position just after the second-to-last difference
+  ##
+  ## Used internally by `uchime` to detect chimeric breakpoints.
   # Mimics USEARCH GetLeftRight
   var diffs = 0
   var posL0 = -1
@@ -194,6 +221,23 @@ proc getLeftRight*(q, t: string, path: AlignPath): tuple[diffs, posL0, posL1,
 
 proc uchime*(centroids: seq[Centroid], minAbSkew: float = 16.0,
     threads: int = 1): seq[bool] =
+  ## Runs the UCHIME2 chimera detection algorithm on a set of centroids.
+  ##
+  ## For each centroid the algorithm aligns it against all higher-abundance
+  ## non-chimeric candidates and checks whether the alignment pattern is
+  ## consistent with a chimeric origin (two distinct parents).
+  ##
+  ## **Parameters**
+  ## * ``centroids``  — ZOTU candidates from `unoise`, sorted by abundance
+  ## * ``minAbSkew``  — minimum abundance ratio between query and parent (default: ``16.0``)
+  ## * ``threads``    — threading mode:
+  ##   * ``1``  sequential, parent-filtered (closest to USEARCH de novo)
+  ##   * ``0``  auto-threaded via `malebolgia` scheduler
+  ##   * ``>1`` fixed number of concurrent chunk tasks
+  ##
+  ## Returns a ``seq[bool]`` parallel to ``centroids``; ``true`` means chimeric.
+  ##
+  ## See also: `unoise <unoisenim/unoise_algo.html#unoise>`_ for upstream clustering.
   type
     UchimeResult = object
       chimera: bool

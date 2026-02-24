@@ -1,7 +1,14 @@
+## Naive Bayesian Classifier (NBC) for amplicon taxonomy.
+##
+## Implements the RDP-style NBC algorithm using 8-mer word frequencies
+## and bootstrap resampling to assign taxonomic ranks with confidence
+## estimates.  Both forward and reverse-complement strands are evaluated.
+
 import math, strutils, tables
 
 const
   NbcKmerSize* = 8
+    ## Length of k-mer words used for NBC classification (8-mers = 65 536 possible words).
   NbcWordSpace = 65536
 
 type
@@ -14,20 +21,34 @@ type
     wordCounts: Table[uint16, int]
 
   NbcIndex* = object
+    ## Taxonomy tree index built from reference sequences for NBC classification.
+    ##
+    ## Internal tree nodes store per-rank k-mer word counts used during
+    ## Bayesian scoring.  Construct with `buildNbcIndex`.
     nodes: seq[NbcNode]
 
   NbcHit* = object
-    rankNames*: seq[string]
-    rankProbs*: seq[float]
-    strand*: char
+    ## Result of an NBC taxonomic classification.
+    rankNames*: seq[string]  ## Taxonomy rank strings for the predicted path
+    rankProbs*: seq[float]   ## Bootstrap confidence per rank (0.0–1.0)
+    strand*: char            ## Matched strand: ``'+'`` or ``'-'``
 
 proc parseTaxRanks*(tax: string): seq[string] =
+  ## Splits a comma-delimited taxonomy string into a list of rank strings.
+  ##
+  ## Leading/trailing whitespace is stripped from each token; empty tokens
+  ## are omitted.  For example ``"d:Bacteria, p:Firmicutes"`` returns
+  ## ``@["d:Bacteria", "p:Firmicutes"]``.
   for p in tax.split(','):
     let v = p.strip()
     if v.len > 0:
       result.add(v)
 
 proc reverseComplement*(s: string): string =
+  ## Returns the reverse complement of DNA/RNA sequence ``s``.
+  ##
+  ## Both upper- and lower-case bases are handled; non-ACGTU characters are
+  ## passed through unchanged.
   var res = newString(s.len)
   for i in 0 ..< s.len:
     let c = s[s.len - 1 - i]
@@ -80,6 +101,18 @@ proc collectUniqueWords(s: string, seen: var array[NbcWordSpace, int32],
       result.add(kmer)
 
 proc buildNbcIndex*(seqs: seq[string], taxStrings: seq[string]): NbcIndex =
+  ## Builds a taxonomy tree index from reference sequences and taxonomy strings.
+  ##
+  ## Each sequence in ``seqs`` is paired with the corresponding entry in
+  ## ``taxStrings``.  Unique 8-mers from each sequence are accumulated into
+  ## the tree nodes along the taxonomy path, enabling Bayesian scoring during
+  ## classification.
+  ##
+  ## **Parameters**
+  ## * ``seqs``       — reference DNA sequences
+  ## * ``taxStrings`` — taxonomy strings matching each sequence (comma-delimited ranks)
+  ##
+  ## Returns an `NbcIndex` ready for use with `nbc`.
   var idx = NbcIndex()
   idx.nodes = @[
     NbcNode(name: "*root*", parent: -1, depth: 0, children: @[], seqCount: 0,
@@ -223,6 +256,20 @@ proc classifyOneDir(query: string, idx: NbcIndex, bootIters: int,
 
 proc nbc*(query: string, idx: NbcIndex, bootIters: int = 100,
     minWords: int = 5): NbcHit =
+  ## Classifies ``query`` against the NBC index using bootstrap resampling.
+  ##
+  ## Both the forward sequence and its reverse complement are classified; the
+  ## strand that produces a longer (deeper) taxonomy path wins, with log-score
+  ## as a tiebreaker.
+  ##
+  ## **Parameters**
+  ## * ``query``     — DNA query sequence
+  ## * ``idx``       — prebuilt NBC index from `buildNbcIndex`
+  ## * ``bootIters`` — number of bootstrap iterations for confidence estimation (default: ``100``)
+  ## * ``minWords``  — minimum subsample size per bootstrap iteration (default: ``5``)
+  ##
+  ## Returns an `NbcHit` with rank names, per-rank bootstrap confidences, and
+  ## the matched strand (``'+'`` or ``'-'``).
   let fwd = classifyOneDir(query, idx, bootIters, minWords)
   let rev = classifyOneDir(reverseComplement(query), idx, bootIters, minWords)
 

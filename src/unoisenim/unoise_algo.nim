@@ -1,14 +1,25 @@
+## UNOISE3 error correction and ZOTU clustering algorithm.
+##
+## Implements the UNOISE3 algorithm for denoising amplicon sequences into
+## Zero-radius OTUs (ZOTUs).  Sequences are sorted by abundance and clustered
+## using the UNOISE skew formula and banded Levenshtein distance.
+##
+## **Reference:** Edgar RC (2016). UNOISE2: improved error-correction for
+## Illumina 16S and ITS amplicon sequencing. *bioRxiv* doi:10.1101/081257
+
 import math, algorithm
 
 type
   UnoiseSeq* = object
-    id*: string
-    seq*: string
-    size*: int
+    ## An amplicon sequence with its identifier and abundance count.
+    id*: string   ## Sequence identifier (from FASTA header, without ``>``)
+    seq*: string  ## DNA sequence string
+    size*: int    ## Abundance (copy count) parsed from ``size=`` annotation
 
   Centroid* = object
-    seqObj*: UnoiseSeq
-    totalSize*: int
+    ## A cluster centroid (ZOTU candidate) produced by `unoise`.
+    seqObj*: UnoiseSeq  ## The representative sequence for this centroid
+    totalSize*: int     ## Accumulated abundance across all merged sequences
 
 proc editDistanceLimitImpl(s1, s2: string, limit: int, v0: var seq[int],
     v1: var seq[int]): int =
@@ -62,11 +73,27 @@ proc editDistanceLimitImpl(s1, s2: string, limit: int, v0: var seq[int],
   return limitPlusOne
 
 proc editDistanceLimit*(s1, s2: string, limit: int): int =
+  ## Computes the Levenshtein edit distance between ``s1`` and ``s2`` with
+  ## early termination when the distance would exceed ``limit``.
+  ##
+  ## Uses a banded dynamic-programming approach with O(n) space.
+  ## Returns ``limit + 1`` as soon as the true distance is known to exceed
+  ## ``limit``, making it efficient for threshold-based comparisons.
+  ##
+  ## **Parameters**
+  ## * ``s1``, ``s2`` — DNA sequences to compare
+  ## * ``limit`` — maximum edit distance; returns ``limit+1`` if exceeded
   var v0 = newSeq[int](s2.len + 1)
   var v1 = newSeq[int](s2.len + 1)
   return editDistanceLimitImpl(s1, s2, limit, v0, v1)
 
 proc extractKmers*(s: string, kmers: var seq[uint16]) =
+  ## Extracts all overlapping 8-mer (octamer) words from sequence ``s``.
+  ##
+  ## Each 8-mer is encoded as a ``uint16`` using 2 bits per base
+  ## (A=0, C=1, G=2, T/U=3).  Ambiguous bases (N, etc.) reset the current
+  ## k-mer accumulator.  The ``kmers`` sequence is cleared before filling.
+  ## Does nothing if ``s`` is shorter than 8 bases.
   kmers.setLen(0)
   if s.len >= 8:
     var k: uint16 = 0
@@ -88,6 +115,23 @@ proc extractKmers*(s: string, kmers: var seq[uint16]) =
 
 proc unoise*(sequences: seq[UnoiseSeq], alpha: float = 2.0,
     minsize: int = 8): seq[Centroid] =
+  ## Runs the UNOISE3 clustering algorithm on a set of dereplicated sequences.
+  ##
+  ## Sequences are processed in descending abundance order.  Each sequence is
+  ## compared against existing centroids using edit distance and the UNOISE
+  ## skew formula ``skew = targetSize / querySize``.  A sequence is merged into
+  ## the best matching centroid when the number of differences satisfies
+  ## ``diffs ≤ (log2(skew) - 1) / alpha``; otherwise it becomes a new centroid.
+  ##
+  ## **Parameters**
+  ## * ``sequences`` — input sequences with ``size`` annotations
+  ## * ``alpha`` — skew exponent controlling stringency (default: ``2.0``)
+  ## * ``minsize`` — sequences with fewer copies are skipped (default: ``8``)
+  ##
+  ## Returns centroids sorted by total abundance (descending).
+  ## These are ZOTU candidates before chimera filtering.
+  ##
+  ## See also: `uchime <unoisenim/uchime2_algo.html#uchime>`_ for chimera removal.
   # 1. Sort sequences by size, descending
   var sortedSeqs = sequences
   sortedSeqs.sort(proc(a, b: UnoiseSeq): int = cmp(b.size, a.size))

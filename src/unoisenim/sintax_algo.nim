@@ -1,22 +1,41 @@
+## SINTAX rapid taxonomic classifier for amplicon sequences.
+##
+## Implements the SINTAX algorithm which uses 8-mer word matching and
+## bootstrap resampling to classify sequences against a reference database
+## without requiring a training step.
+##
+## **Reference:** Edgar RC (2016). SINTAX: a simple non-Bayesian taxonomy
+## classifier for 16S and ITS sequences. *bioRxiv* doi:10.1101/074161
+
 import strutils, tables, algorithm
 
 type
   SintaxIndex* = object
+    ## Prebuilt k-mer posting-list index for SINTAX classification.
+    ##
+    ## Constructed from a reference database by `buildIndex`.
+    ## ``taxStrings`` holds per-sequence rank arrays; the posting lists
+    ## allow O(1) lookup of which sequences contain a given 8-mer.
     postingStarts: array[65536, int32]
     postingLens: array[65536, int32]
     postingData: seq[int32]
-    taxStrings*: seq[seq[string]]
+    taxStrings*: seq[seq[string]]  ## Per-sequence parsed taxonomy ranks
     seqToTaxIndex: seq[int32]
     uniqTaxStrings: seq[string]
     uniqTaxRanks: seq[seq[string]]
     uniqTaxRankIds: seq[seq[int32]]
 
   SintaxHit* = object
-    rankNames*: seq[string]
-    rankProbs*: seq[float]
-    strand*: char
+    ## Result of a SINTAX taxonomic classification.
+    rankNames*: seq[string]  ## Taxonomy rank strings (e.g. ``"d:Bacteria"``)
+    rankProbs*: seq[float]   ## Bootstrap confidence for each rank (0.0–1.0)
+    strand*: char            ## Matched strand: ``'+'`` (forward) or ``'-'`` (reverse complement)
 
   SintaxState* = object
+    ## Reusable per-thread workspace for batch SINTAX classification.
+    ##
+    ## Initialise once with `initSintaxState` and pass to `sintaxWithState`
+    ## for each query to avoid repeated heap allocation.
     ws: SintaxWorkspace
 
   SintaxWorkspace = object
@@ -36,14 +55,21 @@ type
     initialized: bool
 
 proc postingLen*(idx: SintaxIndex, word: uint16): int =
+  ## Returns the number of database sequences that contain 8-mer ``word``.
   return int(idx.postingLens[word])
 
 proc postingFirst*(idx: SintaxIndex, word: uint16): int32 =
+  ## Returns the index of the first database sequence containing ``word``,
+  ## or ``-1`` if the posting list is empty.
   if idx.postingLens[word] == 0:
     return -1
   return idx.postingData[idx.postingStarts[word]]
 
 proc extractTaxRanks*(tax: string): seq[string] =
+  ## Parses a comma-delimited taxonomy string into a list of rank strings.
+  ##
+  ## Expects a string of the form ``"d:Bacteria,p:Firmicutes,c:Bacilli"``
+  ## and returns each ``rank:name`` token as a separate element.
   # Assuming tax string like "d:Bacteria,p:Firmicutes..."
   for p in tax.split(','):
     result.add(p)
@@ -99,6 +125,17 @@ proc nextMwc(rng: var MwcRng): uint32 =
   return rng.x[0]
 
 proc buildIndex*(seqs: seq[string], taxStrings: seq[string]): SintaxIndex =
+  ## Builds a k-mer posting-list index from reference sequences and taxonomy strings.
+  ##
+  ## Each sequence in ``seqs`` is paired with the corresponding entry in
+  ## ``taxStrings``.  All overlapping 8-mers in each sequence are indexed
+  ## into packed posting lists for fast word-match lookups during classification.
+  ##
+  ## **Parameters**
+  ## * ``seqs``       — reference DNA sequences
+  ## * ``taxStrings`` — taxonomy strings matching each sequence (e.g. ``"d:Bacteria,p:Firmicutes"``)
+  ##
+  ## Returns a `SintaxIndex` ready for use with `sintax` or `sintaxWithState`.
   var idx = SintaxIndex()
   idx.taxStrings = newSeq[seq[string]](taxStrings.len)
   idx.seqToTaxIndex = newSeq[int32](taxStrings.len)
@@ -246,6 +283,10 @@ proc incTaxVote(ws: var SintaxWorkspace, taxIdx: int32) =
   ws.taxVoteCounts.add(1)
 
 proc rc*(s: string): string =
+  ## Returns the reverse complement of DNA/RNA sequence ``s``.
+  ##
+  ## Both upper- and lower-case bases are handled; non-ACGTU characters are
+  ## passed through unchanged.
   var res = newString(s.len)
   for i in 0 ..< s.len:
     let c = s[s.len - 1 - i]
@@ -392,14 +433,42 @@ proc classifyOneDirImpl(query: string, idx: SintaxIndex, ws: var SintaxWorkspace
 
 proc classifyOneDir*(query: string, idx: SintaxIndex, bootSubset: int = 32,
     bootIters: int = 100): tuple[topCount: int, hit: SintaxHit] =
+  ## Classifies ``query`` against ``idx`` on the forward strand only.
+  ##
+  ## Allocates a fresh workspace on each call; prefer `sintaxWithState` for
+  ## batch processing to reuse allocations.
+  ##
+  ## **Parameters**
+  ## * ``query``      — DNA query sequence
+  ## * ``idx``        — prebuilt SINTAX index from `buildIndex`
+  ## * ``bootSubset`` — number of words sampled per bootstrap iteration (default: ``32``)
+  ## * ``bootIters``  — number of bootstrap iterations (default: ``100``)
+  ##
+  ## Returns a tuple of ``(topCount, hit)`` where ``topCount`` is the maximum
+  ## word-match count seen and ``hit`` contains rank names and bootstrap confidences.
   var ws = initWorkspace(idx.taxStrings.len)
   return classifyOneDirImpl(query, idx, ws, false, bootSubset, bootIters)
 
 proc initSintaxState*(idx: SintaxIndex): SintaxState =
+  ## Allocates and returns a reusable `SintaxState` workspace for the given index.
+  ##
+  ## Pass the returned state to `sintaxWithState` for each query to avoid
+  ## repeated heap allocations in batch classification loops.
   result.ws = initWorkspace(idx.taxStrings.len)
 
 proc sintaxWithState*(query: string, idx: SintaxIndex, state: var SintaxState,
     bootSubset: int = 32, bootIters: int = 100): SintaxHit =
+  ## Classifies ``query`` using a pre-allocated `SintaxState` workspace.
+  ##
+  ## Both strands are evaluated; the strand with the higher top word-match
+  ## count wins.  Use this proc in batch loops for best performance.
+  ##
+  ## **Parameters**
+  ## * ``query``      — DNA query sequence
+  ## * ``idx``        — prebuilt SINTAX index from `buildIndex`
+  ## * ``state``      — reusable workspace from `initSintaxState`
+  ## * ``bootSubset`` — number of words sampled per bootstrap iteration (default: ``32``)
+  ## * ``bootIters``  — number of bootstrap iterations (default: ``100``)
   let (countFwd, hitFwd) = classifyOneDirImpl(query, idx, state.ws, false,
       bootSubset, bootIters)
   let (countRev, hitRev) = classifyOneDirImpl(query, idx, state.ws, true,
@@ -416,5 +485,16 @@ proc sintaxWithState*(query: string, idx: SintaxIndex, state: var SintaxState,
 
 proc sintax*(query: string, idx: SintaxIndex, bootSubset: int = 32,
     bootIters: int = 100): SintaxHit =
+  ## Convenience single-query SINTAX classification.
+  ##
+  ## Allocates a fresh workspace, classifies ``query`` on both strands, and
+  ## returns the best hit.  For classifying many queries, prefer `initSintaxState`
+  ## + `sintaxWithState` to reuse workspace allocations.
+  ##
+  ## **Parameters**
+  ## * ``query``      — DNA query sequence
+  ## * ``idx``        — prebuilt SINTAX index from `buildIndex`
+  ## * ``bootSubset`` — number of words sampled per bootstrap iteration (default: ``32``)
+  ## * ``bootIters``  — number of bootstrap iterations (default: ``100``)
   var state = initSintaxState(idx)
   return sintaxWithState(query, idx, state, bootSubset, bootIters)
