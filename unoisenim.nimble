@@ -3,7 +3,7 @@
 version       = "0.1.0"
 author        = "Andrea Telatin"
 description   = "Nim library for USEARCH algorithms unoise and sintax."
-license       = "MIT"
+license       = "GPL-3.0"
 srcDir        = "src"
 binDir        = "bin"
 bin           = @["unoise", "sintax", "nbc"]
@@ -18,4 +18,3 @@ requires "malebolgia >= 1.3.0"
 
 task docs, "Generate HTML documentation":
   exec "nim doc --project --index:on --outdir:docs src/unoisenim.nim"
-  cpFile("docs/theindex.html", "docs/index.html")
