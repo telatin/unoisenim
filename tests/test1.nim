@@ -58,8 +58,8 @@ suite "sintax":
 
   test "buildIndex stores unique kmer postings per target":
     let idx = buildIndex(@["AAAAAAAAAA"], @["d:Bacteria"])
-    check idx.postings[0].len == 1
-    check idx.postings[0][0] == 0
+    check idx.postingLen(0'u16) == 1
+    check idx.postingFirst(0'u16) == 0
 
   test "sintax classifies a known query with full confidence":
     let dbSeq = "ACGTCAGTGCATGACCTGTAAG"
