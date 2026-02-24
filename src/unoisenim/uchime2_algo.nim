@@ -7,7 +7,7 @@ var scoreRowA {.threadvar.}: seq[int16]
 var scoreRowB {.threadvar.}: seq[int16]
 
 import math
-import std/threadpool
+import malebolgia
 import unoise_algo
 
 type
@@ -284,28 +284,40 @@ proc uchime*(centroids: seq[Centroid], minAbSkew: float = 16.0,
 
   # threads semantics:
   # 1 => sequential (parent-filtered, closest to USEARCH de novo behavior)
-  # 0 => threaded auto pool size (speed mode, independent-query evaluation)
-  # >1 => threaded with fixed pool size (speed mode)
+  # 0 => threaded auto scheduler (speed mode, independent-query evaluation)
+  # >1 => threaded with fixed max concurrent chunk tasks (speed mode)
   let threaded = threads != 1
 
   if threaded and centroids.len >= 64:
-    if threads > 1:
-      let t = max(1, min(threads, MaxThreadPoolSize))
-      setMaxPoolSize(t)
-      setMinPoolSize(t)
-
     const chunkSize = 32
     var outRes = newSeq[UchimeResult](centroids.len)
     let outPtr = cast[ptr UncheckedArray[UchimeResult]](addr outRes[0])
     var start = 0
-    while start < centroids.len:
-      let thisStart = start
-      let thisCount = min(chunkSize, centroids.len - thisStart)
-      # Threaded mode intentionally does not use evolving chimera flags
-      # to keep queries independent and parallelizable.
-      spawn classifyRange(thisStart, thisCount, cPtr, nil, minAbSkew, outPtr)
-      start += thisCount
-    sync()
+
+    if threads > 1:
+      let maxConcurrentTasks = max(1, threads)
+      while start < centroids.len:
+        var m = createMaster()
+        m.awaitAll:
+          var launched = 0
+          while start < centroids.len and launched < maxConcurrentTasks:
+            let thisStart = start
+            let thisCount = min(chunkSize, centroids.len - thisStart)
+            # Threaded mode intentionally does not use evolving chimera flags
+            # to keep queries independent and parallelizable.
+            m.spawn classifyRange(thisStart, thisCount, cPtr, nil, minAbSkew, outPtr)
+            start += thisCount
+            inc launched
+    else:
+      var m = createMaster()
+      m.awaitAll:
+        while start < centroids.len:
+          let thisStart = start
+          let thisCount = min(chunkSize, centroids.len - thisStart)
+          # Threaded mode intentionally does not use evolving chimera flags
+          # to keep queries independent and parallelizable.
+          m.spawn classifyRange(thisStart, thisCount, cPtr, nil, minAbSkew, outPtr)
+          start += thisCount
 
     for i in 0 ..< centroids.len:
       isChimera[i] = outRes[i].chimera

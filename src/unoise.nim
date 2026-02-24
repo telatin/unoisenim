@@ -13,7 +13,7 @@ proc main() =
     option("-m", "--minsize", default = some("8"),
         help = "Minimum abundance for a sequence to be processed (default 8)")
     option("--uchime-threads", default = some("0"),
-        help = "UCHIME threads: 0=auto threaded, 1=sequential, >1 fixed threadpool size")
+        help = "UCHIME threads: 0=auto threaded, 1=sequential, >1 fixed max concurrent chunk tasks")
 
   var opts: typeof(p.parse())
   try:
@@ -53,9 +53,9 @@ proc main() =
   if uchimeThreads == 1:
     echo "UCHIME mode: sequential"
   elif uchimeThreads == 0:
-    echo "UCHIME mode: threaded (auto pool)"
+    echo "UCHIME mode: threaded (auto scheduler)"
   else:
-    echo "UCHIME mode: threaded (pool=", uchimeThreads, ")"
+    echo "UCHIME mode: threaded (max concurrent chunk tasks=", uchimeThreads, ")"
   let chimeras = uchime(centroids, 16.0, uchimeThreads)
   let t3 = cpuTime()
   echo "UCHIME chimera filtering took ", (t3 - t2), " seconds."
