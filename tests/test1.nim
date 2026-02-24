@@ -36,17 +36,61 @@ suite "unoise":
     check centroids[1].totalSize == 9
 
 suite "uchime":
+  proc mkCentroid(id, seq: string, size: int): Centroid =
+    Centroid(seqObj: UnoiseSeq(id: id, seq: seq, size: size), totalSize: size)
+
+  test "empty input returns empty flags":
+    check uchime(@[], minAbSkew = 16.0, threads = 1).len == 0
+    check uchime(@[], minAbSkew = 16.0, threads = 0).len == 0
+    check uchime(@[], minAbSkew = 16.0, threads = 4).len == 0
+
   test "exact low-abundance match is not called chimera":
     let centroids = @[
-      Centroid(seqObj: UnoiseSeq(id: "parent", seq: "ACGTACGTAA", size: 200),
-        totalSize: 200),
-      Centroid(seqObj: UnoiseSeq(id: "query", seq: "ACGTACGTAA", size: 10),
-        totalSize: 10)
+      mkCentroid("parent", "ACGTACGTAA", 200),
+      mkCentroid("query", "ACGTACGTAA", 10)
     ]
     let flags = uchime(centroids, minAbSkew = 16.0)
     check flags.len == 2
     check flags[0] == false
     check flags[1] == false
+
+  test "threaded options fall back to sequential for small input":
+    let centroids = @[
+      mkCentroid("parentA", "ACGTACGTAA", 300),
+      mkCentroid("parentB", "ACGTACGTAT", 40),
+      mkCentroid("query", "ACGTACGTAA", 10)
+    ]
+    let seqFlags = uchime(centroids, minAbSkew = 16.0, threads = 1)
+    let autoFlags = uchime(centroids, minAbSkew = 16.0, threads = 0)
+    let fixedFlags = uchime(centroids, minAbSkew = 16.0, threads = 8)
+    check autoFlags == seqFlags
+    check fixedFlags == seqFlags
+
+  test "threaded auto and fixed modes are equivalent on larger inputs":
+    const n = 96
+    var centroids = newSeq[Centroid](n)
+    for i in 0..<n:
+      var seq = "ACGTACGTACGTACGT"
+      seq[^1] = char(ord('A') + (i mod 4))
+      centroids[i] = mkCentroid("c" & $i, seq, n - i + 100)
+
+    let autoFlags = uchime(centroids, minAbSkew = 16.0, threads = 0)
+    let fixedFlags = uchime(centroids, minAbSkew = 16.0, threads = 4)
+    check autoFlags.len == n
+    check fixedFlags.len == n
+    check autoFlags == fixedFlags
+
+  test "threaded mode is deterministic across repeated runs":
+    const n = 96
+    var centroids = newSeq[Centroid](n)
+    for i in 0..<n:
+      var seq = "TGCATGCATGCATGCA"
+      seq[^2] = char(ord('A') + (i mod 4))
+      centroids[i] = mkCentroid("d" & $i, seq, n - i + 100)
+
+    let run1 = uchime(centroids, minAbSkew = 16.0, threads = 0)
+    let run2 = uchime(centroids, minAbSkew = 16.0, threads = 0)
+    check run1 == run2
 
 suite "sintax":
   test "extractTaxRanks splits comma-delimited taxonomy":
