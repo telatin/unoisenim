@@ -1,0 +1,5 @@
+nimTitle	uchime2_algo	unoisenim/uchime2_algo.html	module src/unoisenim/uchime2_algo		0
+nim	AlignPath	unoisenim/uchime2_algo.html#AlignPath	type AlignPath		23
+nim	globalAlign	unoisenim/uchime2_algo.html#globalAlign,string,string,AlignPath	proc globalAlign(q, t: string; path: var AlignPath): int		48
+nim	getLeftRight	unoisenim/uchime2_algo.html#getLeftRight,string,string,AlignPath	proc getLeftRight(q, t: string; path: AlignPath): tuple[\n    diffs, posL0, posL1, posR0, posR1: int]		154
+nim	uchime	unoisenim/uchime2_algo.html#uchime,seq[Centroid],float,int	proc uchime(centroids: seq[Centroid]; minAbSkew: float = 16.0; threads: int = 1): seq[\n    bool]		222

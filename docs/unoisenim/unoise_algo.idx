@@ -1,0 +1,6 @@
+nimTitle	unoise_algo	unoisenim/unoise_algo.html	module src/unoisenim/unoise_algo		0
+nim	UnoiseSeq	unoisenim/unoise_algo.html#UnoiseSeq	object UnoiseSeq		13
+nim	Centroid	unoisenim/unoise_algo.html#Centroid	object Centroid		19
+nim	editDistanceLimit	unoisenim/unoise_algo.html#editDistanceLimit,string,string,int	proc editDistanceLimit(s1, s2: string; limit: int): int		75
+nim	extractKmers	unoisenim/unoise_algo.html#extractKmers,string,seq[uint16]	proc extractKmers(s: string; kmers: var seq[uint16])		90
+nim	unoise	unoisenim/unoise_algo.html#unoise,seq[UnoiseSeq],float,int	proc unoise(sequences: seq[UnoiseSeq]; alpha: float = 2.0; minsize: int = 8): seq[\n    Centroid]		116

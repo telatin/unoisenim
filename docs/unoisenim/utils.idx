@@ -1,0 +1,2 @@
+nimTitle	utils	unoisenim/utils.html	module src/unoisenim/utils		0
+nim	parseSize	unoisenim/utils.html#parseSize,string	proc parseSize(label: string): int		5

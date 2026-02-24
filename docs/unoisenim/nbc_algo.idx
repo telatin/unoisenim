@@ -1,0 +1,8 @@
+nimTitle	nbc_algo	unoisenim/nbc_algo.html	module src/unoisenim/nbc_algo		0
+nim	NbcKmerSize	unoisenim/nbc_algo.html#NbcKmerSize	const NbcKmerSize		10
+nim	NbcIndex	unoisenim/nbc_algo.html#NbcIndex	object NbcIndex		23
+nim	NbcHit	unoisenim/nbc_algo.html#NbcHit	object NbcHit		30
+nim	parseTaxRanks	unoisenim/nbc_algo.html#parseTaxRanks,string	proc parseTaxRanks(tax: string): seq[string]		36
+nim	reverseComplement	unoisenim/nbc_algo.html#reverseComplement,string	proc reverseComplement(s: string): string		47
+nim	buildNbcIndex	unoisenim/nbc_algo.html#buildNbcIndex,seq[string],seq[string]	proc buildNbcIndex(seqs: seq[string]; taxStrings: seq[string]): NbcIndex		103
+nim	nbc	unoisenim/nbc_algo.html#nbc,string,NbcIndex,int,int	proc nbc(query: string; idx: NbcIndex; bootIters: int = 100; minWords: int = 5): NbcHit		257

@@ -1,0 +1,13 @@
+nimTitle	sintax_algo	unoisenim/sintax_algo.html	module src/unoisenim/sintax_algo		0
+nim	SintaxIndex	unoisenim/sintax_algo.html#SintaxIndex	object SintaxIndex		13
+nim	SintaxHit	unoisenim/sintax_algo.html#SintaxHit	object SintaxHit		28
+nim	SintaxState	unoisenim/sintax_algo.html#SintaxState	object SintaxState		34
+nim	postingLen	unoisenim/sintax_algo.html#postingLen,SintaxIndex,uint16	proc postingLen(idx: SintaxIndex; word: uint16): int		57
+nim	postingFirst	unoisenim/sintax_algo.html#postingFirst,SintaxIndex,uint16	proc postingFirst(idx: SintaxIndex; word: uint16): int32		61
+nim	extractTaxRanks	unoisenim/sintax_algo.html#extractTaxRanks,string	proc extractTaxRanks(tax: string): seq[string]		68
+nim	buildIndex	unoisenim/sintax_algo.html#buildIndex,seq[string],seq[string]	proc buildIndex(seqs: seq[string]; taxStrings: seq[string]): SintaxIndex		127
+nim	rc	unoisenim/sintax_algo.html#rc,string	proc rc(s: string): string		285
+nim	classifyOneDir	unoisenim/sintax_algo.html#classifyOneDir,string,SintaxIndex,int,int	proc classifyOneDir(query: string; idx: SintaxIndex; bootSubset: int = 32;\n               bootIters: int = 100): tuple[topCount: int, hit: SintaxHit]		434
+nim	initSintaxState	unoisenim/sintax_algo.html#initSintaxState,SintaxIndex	proc initSintaxState(idx: SintaxIndex): SintaxState		452
+nim	sintaxWithState	unoisenim/sintax_algo.html#sintaxWithState,string,SintaxIndex,SintaxState,int,int	proc sintaxWithState(query: string; idx: SintaxIndex; state: var SintaxState;\n                bootSubset: int = 32; bootIters: int = 100): SintaxHit		459
+nim	sintax	unoisenim/sintax_algo.html#sintax,string,SintaxIndex,int,int	proc sintax(query: string; idx: SintaxIndex; bootSubset: int = 32;\n       bootIters: int = 100): SintaxHit		486
