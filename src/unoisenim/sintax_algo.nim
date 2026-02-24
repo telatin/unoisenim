@@ -7,6 +7,7 @@ type
     seqToTaxIndex: seq[int32]
     uniqTaxStrings: seq[string]
     uniqTaxRanks: seq[seq[string]]
+    uniqTaxRankIds: seq[seq[int32]]
 
   SintaxHit* = object
     rankNames*: seq[string]
@@ -23,7 +24,8 @@ type
     u: seq[int32]
     modifiedTargets: seq[int]
     topTargets: seq[int]
-    taxIdxToCount: Table[int32, int]
+    taxVoteIdxs: seq[int32]
+    taxVoteCounts: seq[int]
     tieRng: MwcRng
     randSeed: uint32
 
@@ -43,15 +45,6 @@ proc baseBits(c: char): int =
     of 'G', 'g': return 2
     of 'T', 't', 'U', 'u': return 3
     else: return -1
-
-proc nameIsInTaxStr(taxStr: string, name: string): bool =
-  let n = taxStr.find(name)
-  if n < 0:
-    return false
-  let m = n + name.len
-  if m >= taxStr.len:
-    return true
-  return taxStr[m] == ','
 
 proc slcgReset(state: var uint32, seed: uint32) =
   state = seed
@@ -100,6 +93,7 @@ proc buildIndex*(seqs: seq[string], taxStrings: seq[string]): SintaxIndex =
   idx.taxStrings = newSeq[seq[string]](taxStrings.len)
   idx.seqToTaxIndex = newSeq[int32](taxStrings.len)
   var taxToIdx = initTable[string, int32]()
+  var rankToId = initTable[string, int32]()
   for i, ts in taxStrings:
     idx.taxStrings[i] = extractTaxRanks(ts)
     if not taxToIdx.hasKey(ts):
@@ -107,6 +101,12 @@ proc buildIndex*(seqs: seq[string], taxStrings: seq[string]): SintaxIndex =
       taxToIdx[ts] = ti
       idx.uniqTaxStrings.add(ts)
       idx.uniqTaxRanks.add(idx.taxStrings[i])
+      var rankIds = newSeq[int32](idx.taxStrings[i].len)
+      for r, rankName in idx.taxStrings[i]:
+        if not rankToId.hasKey(rankName):
+          rankToId[rankName] = int32(rankToId.len)
+        rankIds[r] = rankToId[rankName]
+      idx.uniqTaxRankIds.add(rankIds)
     idx.seqToTaxIndex[i] = taxToIdx[ts]
 
   var lastSeen: array[65536, int32]
@@ -146,8 +146,8 @@ proc initWorkspace(dbSize: int): SintaxWorkspace =
   result.u = newSeq[int32](dbSize)
   result.modifiedTargets = newSeqOfCap[int](1024)
   result.topTargets = newSeqOfCap[int](dbSize)
-  result.taxIdxToCount = initTable[int32, int]()
-  result.taxIdxToCount.clear()
+  result.taxVoteIdxs = newSeqOfCap[int32](128)
+  result.taxVoteCounts = newSeqOfCap[int](128)
   result.randSeed = 1'u32
   resetMwc(result.tieRng, result.randSeed)
 
@@ -158,6 +158,14 @@ proc nextSeenMark(ws: var SintaxWorkspace): int32 =
       ws.seenWords[i] = 0
     ws.seenMark = 1
   return ws.seenMark
+
+proc incTaxVote(ws: var SintaxWorkspace, taxIdx: int32) =
+  for i in 0 ..< ws.taxVoteIdxs.len:
+    if ws.taxVoteIdxs[i] == taxIdx:
+      inc ws.taxVoteCounts[i]
+      return
+  ws.taxVoteIdxs.add(taxIdx)
+  ws.taxVoteCounts.add(1)
 
 proc rc*(s: string): string =
   var res = newString(s.len)
@@ -202,7 +210,8 @@ proc classifyOneDirImpl(query: string, idx: SintaxIndex, ws: var SintaxWorkspace
   if ws.queryWords.len < 8:
     return (0, SintaxHit())
 
-  ws.taxIdxToCount.clear()
+  ws.taxVoteIdxs.setLen(0)
+  ws.taxVoteCounts.setLen(0)
   var sampleSeed = ws.randSeed
 
   var topTotalWordCount = 0
@@ -229,7 +238,7 @@ proc classifyOneDirImpl(query: string, idx: SintaxIndex, ws: var SintaxWorkspace
     if ws.modifiedTargets.len == 0:
       let topTargetIndex = int(nextMwc(ws.tieRng) mod uint32(ws.u.len))
       let taxIdx = idx.seqToTaxIndex[topTargetIndex]
-      ws.taxIdxToCount[taxIdx] = ws.taxIdxToCount.getOrDefault(taxIdx, 0) + 1
+      incTaxVote(ws, taxIdx)
     else:
       for targetIdx in ws.modifiedTargets:
         let v = ws.u[targetIdx]
@@ -249,14 +258,12 @@ proc classifyOneDirImpl(query: string, idx: SintaxIndex, ws: var SintaxWorkspace
         topTotalWordCount = int(topU)
 
       let taxIdx = idx.seqToTaxIndex[topTargetIndex]
-      ws.taxIdxToCount[taxIdx] = ws.taxIdxToCount.getOrDefault(taxIdx, 0) + 1
+      incTaxVote(ws, taxIdx)
 
   var taxCounts = newSeq[tuple[taxIdx: int32, count: int]]()
-  taxCounts.setLen(ws.taxIdxToCount.len)
-  var p = 0
-  for k, v in ws.taxIdxToCount:
-    taxCounts[p] = (k, v)
-    inc p
+  taxCounts.setLen(ws.taxVoteIdxs.len)
+  for i in 0 ..< ws.taxVoteIdxs.len:
+    taxCounts[i] = (ws.taxVoteIdxs[i], ws.taxVoteCounts[i])
   if taxCounts.len == 0:
     return (0, SintaxHit())
 
@@ -274,13 +281,16 @@ proc classifyOneDirImpl(query: string, idx: SintaxIndex, ws: var SintaxWorkspace
   hit.rankProbs = newSeq[float](topTaxRanks.len)
 
   var prodP = 1.0
+  let topTaxRankIds = idx.uniqTaxRankIds[topTaxIdx]
   for depth in 0 ..< topTaxRanks.len:
-    let predName = topTaxRanks[depth]
+    let predRankId = topTaxRankIds[depth]
     var predNameCount = topCount
     for j in 1 ..< taxCounts.len:
-      let taxStr = idx.uniqTaxStrings[taxCounts[j].taxIdx]
-      if nameIsInTaxStr(taxStr, predName):
-        predNameCount += taxCounts[j].count
+      let otherRankIds = idx.uniqTaxRankIds[taxCounts[j].taxIdx]
+      for rid in otherRankIds:
+        if rid == predRankId:
+          predNameCount += taxCounts[j].count
+          break
 
     var p = float(predNameCount) / float(bootIters)
     prodP *= p # SINTAX multiplies probabilities as depth increases
