@@ -11,7 +11,7 @@
       --border:    #e2e8f0;
       --text:      #1a202c;
       --muted:     #718096;
-      --accent:    #6c63ff;
+      --accent:    #ae033f;
       --accent-lt: #ede9ff;
       --tag-bg:    #edf2f7;
       --tag-fg:    #4a5568;
@@ -27,7 +27,7 @@
         --border:    #2d3148;
         --text:      #e2e8f0;
         --muted:     #94a3b8;
-        --accent:    #a78bfa;
+        --accent:    #0ba34b;
         --accent-lt: #2d2060;
         --tag-bg:    #252836;
         --tag-fg:    #94a3b8;
@@ -143,6 +143,12 @@
       box-shadow: var(--shadow);
       transition: border-color .15s, box-shadow .15s;
     }
+    .highlight {
+      background-color: #fafcdf;
+    }
+    .highlight-docs {
+      background-color: #e7fcdf;
+    }
     .card:hover { border-color: var(--accent); box-shadow: 0 4px 18px rgba(108,99,255,.12); }
     .card-name {
       font-weight: 700;
@@ -235,10 +241,11 @@
 <!--
           <span class="tag">v0.1.0</span>
 -->
-          <span class="tag">MIT</span>
+          
           <span class="tag accent">Nim ≥ 2.0</span>
           <span class="tag">bioinformatics</span>
           <span class="tag">amplicon</span>
+          <span class="tag">GPL 3.0</span>
         </div>
       </div>
     </header>
@@ -256,7 +263,7 @@
       <h2>Modules</h2>
       <div class="cards">
 
-        <div class="card">
+        <div class="card highlight">
           <div class="card-name">
             <a href="unoisenim.html">unoisenim</a>
           </div>
@@ -321,6 +328,25 @@
           <a class="card-link" href="unoisenim/utils.html">Docs →</a>
         </div>
 
+        <div class="card highlight-docs">
+          <div class="card-name">
+            <a href="unoise.html">UNOISE/UCHIME algorithm</a>
+          </div>
+          <div class="card-desc">
+            Summary card of the UNOISE/UCHIME algorithm.
+          </div>
+          <a class="card-link" href="unoise.html">Docs →</a>
+        </div>
+
+        <div class="card highlight-docs">
+          <div class="card-name">
+            <a href="sintax.html">SINTAX algorithm</a>
+          </div>
+          <div class="card-desc">
+            Summary card of the SINTAX algorithm.
+          </div>
+          <a class="card-link" href="sintax.html">Docs →</a>
+        </div>
       </div>
     </section>
 
@@ -370,7 +396,7 @@
 
     <footer>
       <a href="https://github.com/telatin/unoisenim">unoisenim</a>
-      · Andrea Telatin · MIT License
+      · &copy; Quadram Institute Bioscience - GPL-3.0 Licence
       · Documentation generated with <a href="https://nim-lang.org/">Nim</a>
     </footer>
 
