@@ -29,5 +29,6 @@ import unoisenim/unoise_algo
 import unoisenim/uchime2_algo
 import unoisenim/sintax_algo
 import unoisenim/nbc_algo
+import unoisenim/remove_phix_utils
 
-export utils, unoise_algo, uchime2_algo, sintax_algo, nbc_algo
+export utils, unoise_algo, uchime2_algo, sintax_algo, nbc_algo, remove_phix_utils

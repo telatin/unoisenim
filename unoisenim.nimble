@@ -1,12 +1,12 @@
 # Package
 
-version       = "0.1.0"
+version       = "0.2.0"
 author        = "Andrea Telatin"
 description   = "Nim library for USEARCH algorithms unoise and sintax."
 license       = "GPL-3.0"
 srcDir        = "src"
 binDir        = "bin"
-bin           = @["unoise", "sintax", "nbc"]
+bin           = @["unoise", "sintax", "nbc", "uchime", "remove_phix"]
 
 
 # Dependencies
