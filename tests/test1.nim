@@ -4,6 +4,7 @@ import unoisenim/unoise_algo
 import unoisenim/uchime2_algo
 import unoisenim/sintax_algo
 import unoisenim/nbc_algo
+import unoisenim/remove_phix_utils
 
 suite "utils":
   test "parseSize extracts abundance from FASTA label":
@@ -79,6 +80,26 @@ suite "uchime":
     check autoFlags.len == n
     check fixedFlags.len == n
     check autoFlags == fixedFlags
+
+  test "chimera constructed from two parents is detected":
+    # Parent A covers positions 0-19, Parent B covers 20-39.
+    # The chimera splices them at position 20: the left half matches Parent A
+    # (posL0=19) and the right half matches Parent B (posR0=20), satisfying
+    # posBestL0+1 >= posBestR0 with two different parents.
+    # minParentSize = ceil(10 * 16.0) = 160; both parents qualify.
+    let parentASeq = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" # 40 A's
+    let parentBSeq = "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT" # 40 T's
+    let chimeraSeq = "AAAAAAAAAAAAAAAAAAAA" & "TTTTTTTTTTTTTTTTTTTT" # 20A+20T
+    let centroids = @[
+      mkCentroid("parentA", parentASeq, 1000),
+      mkCentroid("parentB", parentBSeq, 800),
+      mkCentroid("chimera", chimeraSeq, 10),
+    ]
+    let flags = uchime(centroids, minAbSkew = 16.0, threads = 1)
+    check flags.len == 3
+    check flags[0] == false  # parentA: no higher-abundance parents to check against
+    check flags[1] == false  # parentB: posL0 never set vs parentA (first char mismatches)
+    check flags[2] == true   # chimera: breakpoint detected between parentA and parentB
 
   test "threaded mode is deterministic across repeated runs":
     const n = 96
@@ -189,3 +210,33 @@ suite "nbc":
     let hit = nbc(reverseComplement(seqA), idx, bootIters = 80, minWords = 5)
     check hit.strand == '-'
     check hit.rankNames == @["d:Bacteria", "p:Firmicutes", "g:Alpha"]
+
+suite "remove_phix":
+  # First 140 bases of the PhiX174 genome (NC_001422.1)
+  const phixSnip =
+    "GAGTTTTATCGCTTCCATGACGCAGAAGTTAACACTTTCGGATATTTCTGATGAGTCGAAAAATTATCTT" &
+    "GATAAAGCAGGAATTACTACTGCTTGTTTACGAATTAAATCGAAGTGGACTGCTGGCGGAAAATGAGAAA"
+
+  # E. coli 16S rRNA gene opening region — no overlap with PhiX
+  const rnd16s =
+    "AGAGTTTGATCCTGGCTCAGGACGAACGCTGGCGGCATGCTTAACACATGCAAGTCGAACGGTAACAGGA" &
+    "AGAAGCTTGCTTCTTTGCTGACGAGTGGCGGACGGGTGAGTAATGTCTGGGAAACTGCCTGATGGAGGGG"
+
+  test "phixScore returns high score for PhiX-derived sequence":
+    check phixScore(phixSnip) >= 0.7
+
+  test "phixScore returns low score for random 16S":
+    # ~8% overlap expected for random reads; real PhiX threshold is ~0.78 (0.97^8)
+    check phixScore(rnd16s) < 0.3
+
+  test "isPhix returns true for PhiX sequence at default threshold":
+    check isPhix(phixSnip) == true
+
+  test "isPhix returns false for 16S sequence":
+    check isPhix(rnd16s) == false
+
+  test "isPhix respects minKmers guard for short sequences":
+    check isPhix("ACGT", minId = 0.97, minKmers = 8) == false
+
+  test "phixSeqLen matches expected PhiX174 genome length":
+    check phixSeqLen == 5386
