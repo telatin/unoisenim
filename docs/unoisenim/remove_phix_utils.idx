@@ -1,0 +1,5 @@
+nimTitle	remove_phix_utils	unoisenim/remove_phix_utils.html	module src/unoisenim/remove_phix_utils		0
+nim	phixKmers	unoisenim/remove_phix_utils.html#phixKmers	const phixKmers		87
+nim	phixSeqLen	unoisenim/remove_phix_utils.html#phixSeqLen	const phixSeqLen		91
+nim	phixScore	unoisenim/remove_phix_utils.html#phixScore,string	proc phixScore(query: string): float		94
+nim	isPhix	unoisenim/remove_phix_utils.html#isPhix,string,float,int	proc isPhix(query: string; minId: float = 0.97; minKmers: int = 8): bool		126

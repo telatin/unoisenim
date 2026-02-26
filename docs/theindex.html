@@ -25,7 +25,7 @@
   <div class="document" id="documentId">
     <div class="container">
       <h1 class="title">Index</h1>
-      Modules: <a href="unoisenim.html">unoisenim</a>, <a href="unoisenim/nbc_algo.html">unoisenim/nbc_algo</a>, <a href="unoisenim/sintax_algo.html">unoisenim/sintax_algo</a>, <a href="unoisenim/uchime2_algo.html">unoisenim/uchime2_algo</a>, <a href="unoisenim/unoise_algo.html">unoisenim/unoise_algo</a>, <a href="unoisenim/utils.html">unoisenim/utils</a>.<br/><p /><h2>API symbols</h2>
+      Modules: <a href="unoisenim.html">unoisenim</a>, <a href="unoisenim/nbc_algo.html">unoisenim/nbc_algo</a>, <a href="unoisenim/remove_phix_utils.html">unoisenim/remove_phix_utils</a>, <a href="unoisenim/sintax_algo.html">unoisenim/sintax_algo</a>, <a href="unoisenim/uchime2_algo.html">unoisenim/uchime2_algo</a>, <a href="unoisenim/unoise_algo.html">unoisenim/unoise_algo</a>, <a href="unoisenim/utils.html">unoisenim/utils</a>.<br/><p /><h2>API symbols</h2>
 <dl><dt><a name="AlignPath" href="#AlignPath"><span>AlignPath:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="uchime2_algo: type AlignPath" href="unoisenim/uchime2_algo.html#AlignPath">uchime2_algo: type AlignPath</a></li>
@@ -74,6 +74,10 @@
 <li><a class="reference external"
           data-doc-search-tag="sintax_algo: proc initSintaxState(idx: SintaxIndex): SintaxState" href="unoisenim/sintax_algo.html#initSintaxState%2CSintaxIndex">sintax_algo: proc initSintaxState(idx: SintaxIndex): SintaxState</a></li>
           </ul></dd>
+<dt><a name="isPhix" href="#isPhix"><span>isPhix:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="remove_phix_utils: proc isPhix(query: string; minId: float = 0.97; minKmers: int = 8): bool" href="unoisenim/remove_phix_utils.html#isPhix%2Cstring%2Cfloat%2Cint">remove_phix_utils: proc isPhix(query: string; minId: float = 0.97; minKmers: int = 8): bool</a></li>
+          </ul></dd>
 <dt><a name="nbc" href="#nbc"><span>nbc:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nbc_algo: proc nbc(query: string; idx: NbcIndex; bootIters: int = 100; minWords: int = 5): NbcHit" href="unoisenim/nbc_algo.html#nbc%2Cstring%2CNbcIndex%2Cint%2Cint">nbc_algo: proc nbc(query: string; idx: NbcIndex; bootIters: int = 100; minWords: int = 5): NbcHit</a></li>
@@ -97,6 +101,18 @@
 <dt><a name="parseTaxRanks" href="#parseTaxRanks"><span>parseTaxRanks:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
           data-doc-search-tag="nbc_algo: proc parseTaxRanks(tax: string): seq[string]" href="unoisenim/nbc_algo.html#parseTaxRanks%2Cstring">nbc_algo: proc parseTaxRanks(tax: string): seq[string]</a></li>
+          </ul></dd>
+<dt><a name="phixKmers" href="#phixKmers"><span>phixKmers:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="remove_phix_utils: const phixKmers" href="unoisenim/remove_phix_utils.html#phixKmers">remove_phix_utils: const phixKmers</a></li>
+          </ul></dd>
+<dt><a name="phixScore" href="#phixScore"><span>phixScore:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="remove_phix_utils: proc phixScore(query: string): float" href="unoisenim/remove_phix_utils.html#phixScore%2Cstring">remove_phix_utils: proc phixScore(query: string): float</a></li>
+          </ul></dd>
+<dt><a name="phixSeqLen" href="#phixSeqLen"><span>phixSeqLen:</span></a></dt><dd><ul class="simple">
+<li><a class="reference external"
+          data-doc-search-tag="remove_phix_utils: const phixSeqLen" href="unoisenim/remove_phix_utils.html#phixSeqLen">remove_phix_utils: const phixSeqLen</a></li>
           </ul></dd>
 <dt><a name="postingFirst" href="#postingFirst"><span>postingFirst:</span></a></dt><dd><ul class="simple">
 <li><a class="reference external"
@@ -158,7 +174,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-24 16:18:01 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-26 10:08:15 UTC</small>
       </div>
     </div>
   </div>
