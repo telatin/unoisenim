@@ -14,12 +14,12 @@ type
     ## Prebuilt k-mer posting-list index for SINTAX classification.
     ##
     ## Constructed from a reference database by `buildIndex`.
-    ## ``taxStrings`` holds per-sequence rank arrays; the posting lists
-    ## allow O(1) lookup of which sequences contain a given 8-mer.
-    postingStarts: array[65536, int32]
+    ## The posting lists allow O(1) lookup of which sequences contain a
+    ## given 8-mer; taxonomy is stored deduplicated via ``seqToTaxIndex``.
+    postingStarts: array[65536, int64]
     postingLens: array[65536, int32]
     postingData: seq[int32]
-    taxStrings*: seq[seq[string]]  ## Per-sequence parsed taxonomy ranks
+    dbSize*: int  ## Number of database sequences
     seqToTaxIndex: seq[int32]
     uniqTaxStrings: seq[string]
     uniqTaxRanks: seq[seq[string]]
@@ -47,7 +47,6 @@ type
     topTargets: seq[int]
     taxVoteIdxs: seq[int32]
     taxVoteCounts: seq[int]
-    tieRng: MwcRng
     randSeed: uint32
 
   MwcRng = object
@@ -137,24 +136,27 @@ proc buildIndex*(seqs: seq[string], taxStrings: seq[string]): SintaxIndex =
   ##
   ## Returns a `SintaxIndex` ready for use with `sintax` or `sintaxWithState`.
   var idx = SintaxIndex()
-  idx.taxStrings = newSeq[seq[string]](taxStrings.len)
+  idx.dbSize = taxStrings.len
   idx.seqToTaxIndex = newSeq[int32](taxStrings.len)
   var taxToIdx = initTable[string, int32]()
   var rankToId = initTable[string, int32]()
   for i, ts in taxStrings:
-    idx.taxStrings[i] = extractTaxRanks(ts)
-    if not taxToIdx.hasKey(ts):
-      let ti = int32(idx.uniqTaxStrings.len)
-      taxToIdx[ts] = ti
-      idx.uniqTaxStrings.add(ts)
-      idx.uniqTaxRanks.add(idx.taxStrings[i])
-      var rankIds = newSeq[int32](idx.taxStrings[i].len)
-      for r, rankName in idx.taxStrings[i]:
-        if not rankToId.hasKey(rankName):
-          rankToId[rankName] = int32(rankToId.len)
-        rankIds[r] = rankToId[rankName]
-      idx.uniqTaxRankIds.add(rankIds)
-    idx.seqToTaxIndex[i] = taxToIdx[ts]
+    let known = taxToIdx.getOrDefault(ts, -1'i32)
+    if known >= 0:
+      idx.seqToTaxIndex[i] = known
+      continue
+    let ti = int32(idx.uniqTaxStrings.len)
+    taxToIdx[ts] = ti
+    idx.uniqTaxStrings.add(ts)
+    let ranks = extractTaxRanks(ts)
+    var rankIds = newSeq[int32](ranks.len)
+    for r, rankName in ranks:
+      if not rankToId.hasKey(rankName):
+        rankToId[rankName] = int32(rankToId.len)
+      rankIds[r] = rankToId[rankName]
+    idx.uniqTaxRanks.add(ranks)
+    idx.uniqTaxRankIds.add(rankIds)
+    idx.seqToTaxIndex[i] = ti
 
   var counts: array[65536, int32]
   var lastSeen: array[65536, int32]
@@ -186,12 +188,12 @@ proc buildIndex*(seqs: seq[string], taxStrings: seq[string]): SintaxIndex =
 
   var total = 0
   for w in 0 ..< 65536:
-    idx.postingStarts[w] = int32(total)
+    idx.postingStarts[w] = int64(total)
     idx.postingLens[w] = counts[w]
     total += int(counts[w])
   idx.postingData = newSeq[int32](total)
 
-  var writePos: array[65536, int32]
+  var writePos: array[65536, int64]
   for w in 0 ..< 65536:
     writePos[w] = idx.postingStarts[w]
     lastSeen[w] = -1
@@ -264,7 +266,6 @@ proc initWorkspace(dbSize: int): SintaxWorkspace =
   result.taxVoteIdxs = newSeqOfCap[int32](128)
   result.taxVoteCounts = newSeqOfCap[int](128)
   result.randSeed = 1'u32
-  resetMwc(result.tieRng, result.randSeed)
 
 proc nextSeenMark(ws: var SintaxWorkspace): int32 =
   inc ws.seenMark
@@ -340,6 +341,10 @@ proc classifyOneDirImpl(query: string, idx: SintaxIndex, ws: var SintaxWorkspace
   ws.taxVoteIdxs.setLen(0)
   ws.taxVoteCounts.setLen(0)
   var sampleSeed = ws.randSeed
+  # Tie-break RNG is seeded per call so results are deterministic
+  # regardless of workspace reuse or threading.
+  var tieRng: MwcRng
+  resetMwc(tieRng, ws.randSeed)
 
   var topTotalWordCount = 0
 
@@ -355,9 +360,9 @@ proc classifyOneDirImpl(query: string, idx: SintaxIndex, ws: var SintaxWorkspace
       let ri = int(nextRand(sampleSeed) mod uint32(ws.queryWords.len))
       let word = ws.queryWords[ri]
       let start = idx.postingStarts[word]
-      let n = idx.postingLens[word]
+      let n = int(idx.postingLens[word])
       var pos = start
-      let endPos = start + n
+      let endPos = start + int64(n)
       while pos < endPos:
         let t = idx.postingData[pos]
         let targetIdx = int(t)
@@ -370,7 +375,7 @@ proc classifyOneDirImpl(query: string, idx: SintaxIndex, ws: var SintaxWorkspace
     ws.topTargets.setLen(0)
 
     if ws.modifiedTargets.len == 0:
-      let topTargetIndex = int(nextMwc(ws.tieRng) mod uint32(ws.u.len))
+      let topTargetIndex = int(nextMwc(tieRng) mod uint32(ws.u.len))
       let taxIdx = idx.seqToTaxIndex[topTargetIndex]
       incTaxVote(ws, taxIdx)
     else:
@@ -384,7 +389,7 @@ proc classifyOneDirImpl(query: string, idx: SintaxIndex, ws: var SintaxWorkspace
           ws.topTargets.add(targetIdx)
 
       # USEARCH tie-breaks on index-ordered top targets.
-      let r = int(nextMwc(ws.tieRng) mod uint32(ws.topTargets.len))
+      let r = int(nextMwc(tieRng) mod uint32(ws.topTargets.len))
       let topTargetIndex = kthSmallestInPlace(ws.topTargets, r)
       if int(topU) > topTotalWordCount:
         topTotalWordCount = int(topU)
@@ -399,10 +404,11 @@ proc classifyOneDirImpl(query: string, idx: SintaxIndex, ws: var SintaxWorkspace
   if taxCounts.len == 0:
     return (0, SintaxHit())
 
+  let utsPtr = unsafeAddr idx.uniqTaxStrings
   taxCounts.sort(proc(a, b: tuple[taxIdx: int32, count: int]): int =
     if a.count != b.count:
       return cmp(b.count, a.count)
-    return cmp(idx.uniqTaxStrings[a.taxIdx], idx.uniqTaxStrings[b.taxIdx]))
+    return cmp(utsPtr[][a.taxIdx], utsPtr[][b.taxIdx]))
 
   let topTaxIdx = taxCounts[0].taxIdx
   let topCount = taxCounts[0].count
@@ -446,7 +452,7 @@ proc classifyOneDir*(query: string, idx: SintaxIndex, bootSubset: int = 32,
   ##
   ## Returns a tuple of ``(topCount, hit)`` where ``topCount`` is the maximum
   ## word-match count seen and ``hit`` contains rank names and bootstrap confidences.
-  var ws = initWorkspace(idx.taxStrings.len)
+  var ws = initWorkspace(idx.dbSize)
   return classifyOneDirImpl(query, idx, ws, false, bootSubset, bootIters)
 
 proc initSintaxState*(idx: SintaxIndex): SintaxState =
@@ -454,7 +460,7 @@ proc initSintaxState*(idx: SintaxIndex): SintaxState =
   ##
   ## Pass the returned state to `sintaxWithState` for each query to avoid
   ## repeated heap allocations in batch classification loops.
-  result.ws = initWorkspace(idx.taxStrings.len)
+  result.ws = initWorkspace(idx.dbSize)
 
 proc sintaxWithState*(query: string, idx: SintaxIndex, state: var SintaxState,
     bootSubset: int = 32, bootIters: int = 100): SintaxHit =
@@ -498,3 +504,4 @@ proc sintax*(query: string, idx: SintaxIndex, bootSubset: int = 32,
   ## * ``bootIters``  — number of bootstrap iterations (default: ``100``)
   var state = initSintaxState(idx)
   return sintaxWithState(query, idx, state, bootSubset, bootIters)
+
