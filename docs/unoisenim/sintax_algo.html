@@ -60,7 +60,7 @@
   rankProbs*: seq[float]     ## Bootstrap confidence for each rank (0.0–1.0)
   strand*: char              ## Matched strand: ``'+'`` (forward) or ``'-'`` (reverse complement)">SintaxHit</a></li>
 <li><a class="reference" href="#SintaxIndex" title="SintaxIndex = object
-  taxStrings*: seq[seq[string]] ## Per-sequence parsed taxonomy ranks">SintaxIndex</a></li>
+  dbSize*: int               ## Number of database sequences">SintaxIndex</a></li>
 <li><a class="reference" href="#SintaxState" title="SintaxState = object">SintaxState</a></li>
 
     </ul>
@@ -144,11 +144,11 @@
 </div>
 <div id="SintaxIndex">
   <dt><pre><a href="sintax_algo.html#SintaxIndex"><span class="Identifier">SintaxIndex</span></a> <span class="Other">=</span> <span class="Keyword">object</span>
-  <span class="Identifier">taxStrings</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">seq</span><span class="Other">[</span><span class="Identifier">string</span><span class="Other">]</span><span class="Other">]</span> <span class="Comment">## Per-sequence parsed taxonomy ranks</span></pre></dt>
+  <span class="Identifier">dbSize</span><span class="Operator">*</span><span class="Other">:</span> <span class="Identifier">int</span>               <span class="Comment">## Number of database sequences</span></pre></dt>
   <dd>
     
     <p>Prebuilt k-mer posting-list index for SINTAX classification.</p>
-<p>Constructed from a reference database by <tt class="docutils literal"><span class="pre"><span class="Identifier">buildIndex</span></span></tt>. <tt class="docutils literal"><span class="pre">taxStrings</span></tt> holds per-sequence rank arrays; the posting lists allow O(1) lookup of which sequences contain a given 8-mer.</p>
+<p>Constructed from a reference database by <tt class="docutils literal"><span class="pre"><span class="Identifier">buildIndex</span></span></tt>. The posting lists allow O(1) lookup of which sequences contain a given 8-mer; taxonomy is stored deduplicated via <tt class="docutils literal"><span class="pre">seqToTaxIndex</span></tt>.</p>
 
     
   </dd>
@@ -329,7 +329,7 @@
       <div class="twelve-columns footer">
         <span class="nim-sprite"></span>
         <br>
-        <small style="color: var(--hint);">Made with Nim. Generated: 2026-02-26 10:08:14 UTC</small>
+        <small style="color: var(--hint);">Made with Nim. Generated: 2026-08-12 14:38:48 UTC</small>
       </div>
     </div>
   </div>
