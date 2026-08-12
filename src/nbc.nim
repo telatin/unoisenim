@@ -1,6 +1,23 @@
 import argparse, readfx, strutils, times
 import unoisenim/nbc_algo
 
+proc dada2HeaderToTax(header: string): string =
+  const rankPrefixes = ["d:", "p:", "c:", "o:", "f:", "g:", "s:"]
+  var parts: seq[string]
+  for p in header.split(';'):
+    let trimmed = p.strip()
+    if trimmed.len > 0:
+      parts.add(trimmed)
+  if parts.len == 0:
+    return ""
+  var taxedParts: seq[string]
+  for i, part in parts:
+    if i < rankPrefixes.len:
+      taxedParts.add(rankPrefixes[i] & part)
+    else:
+      taxedParts.add("r" & $(i + 1) & ":" & part)
+  return taxedParts.join(",")
+
 proc extractTaxFromLabel(label: string): string =
   for p in label.split(';'):
     if p.startsWith("tax="):
@@ -19,6 +36,8 @@ proc main() =
         help = "Bootstrap iterations (default 100)")
     option("--min-words", default = some("5"),
         help = "Minimum words sampled per bootstrap (default 5)")
+    flag("--dada2-format",
+        help = "Database uses DADA2 taxonomy format (header is semicolon-delimited taxonomy)")
 
   var opts: typeof(p.parse())
   try:
@@ -39,14 +58,30 @@ proc main() =
   let cutoff = parseFloat(opts.cutoff)
   let bootIters = parseInt(opts.boot_iters)
   let minWords = parseInt(opts.min_words)
+  let dada2Format = opts.dada2_format
 
   var dbSeqs = newSeq[string]()
   var taxStrings = newSeq[string]()
+  var noTaxCount = 0
+  var totalDbSeqs = 0
   var fDb = readfx.xopen[GzFile](opts.database, mode = fmRead)
   var record: FQRecord
   while readFastx(fDb, record):
     dbSeqs.add(record.sequence)
-    taxStrings.add(extractTaxFromLabel(record.name))
+    inc totalDbSeqs
+    var tax = ""
+    if dada2Format:
+      tax = dada2HeaderToTax(record.name)
+    else:
+      tax = extractTaxFromLabel(record.name)
+    if tax == "":
+      inc noTaxCount
+    taxStrings.add(tax)
+
+  if noTaxCount > 0:
+    stderr.writeLine("Warning: ", noTaxCount, "/", totalDbSeqs,
+        " database sequences had no taxonomy detected. ",
+        "Ensure database is correctly formatted or use --dada2-format.")
 
   echo "Building NBC index from ", dbSeqs.len, " database sequences..."
   let t0 = cpuTime()
